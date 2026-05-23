@@ -1,29 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { saveElder } from './actions';
 import InstallButton from '@/components/InstallButton';
+import { useAuth } from '@/lib/auth-context';
 
 interface Elder {
-  id: string;
   full_name: string;
   age: number;
   favorite_topics: string[];
 }
 
-export default function DashboardClient({ initialElder }: { initialElder: Elder | null }) {
-  const [fullName, setFullName] = useState(initialElder?.full_name || '');
-  const [age, setAge] = useState(initialElder?.age?.toString() || '');
-  const [topics, setTopics] = useState<[string, string, string]>(
-    initialElder?.favorite_topics
-      ? [initialElder.favorite_topics[0] || '', initialElder.favorite_topics[1] || '', initialElder.favorite_topics[2] || '']
-      : ['', '', '']
-  );
+export default function DashboardClient() {
+  const { logout } = useAuth();
+  const [fullName, setFullName] = useState('');
+  const [age, setAge] = useState('');
+  const [topics, setTopics] = useState<[string, string, string]>(['', '', '']);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSave = async (e: React.FormEvent) => {
+  // Load from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('bivi_elder');
+    if (stored) {
+      try {
+        const elder: Elder = JSON.parse(stored);
+        setFullName(elder.full_name);
+        setAge(elder.age.toString());
+        setTopics([
+          elder.favorite_topics[0] || '',
+          elder.favorite_topics[1] || '',
+          elder.favorite_topics[2] || '',
+        ] as [string, string, string]);
+      } catch (e) {
+        console.error('Failed to load elder:', e);
+      }
+    }
+  }, []);
+
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -34,7 +49,13 @@ export default function DashboardClient({ initialElder }: { initialElder: Elder 
         throw new Error('Nombre y edad son requeridos');
       }
 
-      await saveElder(fullName, parseInt(age), topics.filter(Boolean));
+      const elder: Elder = {
+        full_name: fullName,
+        age: parseInt(age),
+        favorite_topics: topics.filter(Boolean),
+      };
+
+      localStorage.setItem('bivi_elder', JSON.stringify(elder));
       setSuccess('Datos guardados correctamente');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
@@ -102,7 +123,17 @@ export default function DashboardClient({ initialElder }: { initialElder: Elder 
       </div>
 
       {/* Instalación PWA */}
-      {initialElder && <InstallButton elderName={initialElder.full_name} />}
+      {fullName && <InstallButton elderName={fullName} />}
+
+      {/* Logout */}
+      <div className="bg-white rounded-2xl shadow-xl p-8">
+        <button
+          onClick={logout}
+          className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition"
+        >
+          Cerrar sesión
+        </button>
+      </div>
     </div>
   );
 }

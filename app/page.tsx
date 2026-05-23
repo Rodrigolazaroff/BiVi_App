@@ -1,26 +1,31 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+'use client';
 
-export default async function Home() {
-  const supabase = await createClient();
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function Home() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
 
-  if (!user) {
-    redirect('/login');
-  }
+  useEffect(() => {
+    if (isLoading) return;
 
-  const { data: elder } = await supabase
-    .from('elders')
-    .select('id')
-    .eq('profile_id', user.id)
-    .single();
+    if (!user) {
+      router.push('/login');
+    } else {
+      const elder = localStorage.getItem('bivi_elder');
+      if (!elder) {
+        router.push('/dashboard');
+      } else {
+        router.push('/talk');
+      }
+    }
+  }, [user, isLoading, router]);
 
-  if (!elder) {
-    redirect('/dashboard');
-  }
-
-  redirect('/talk');
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+      <p className="text-gray-600">Cargando...</p>
+    </div>
+  );
 }

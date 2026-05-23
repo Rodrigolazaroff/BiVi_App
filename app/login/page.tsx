@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -13,7 +13,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const { user, signup, login, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,25 +28,17 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              first_name: firstName,
-              last_name: lastName,
-            },
-          },
-        });
-        if (error) throw error;
-        setError('Cuenta creada. Iniciando sesión...');
-        setTimeout(() => router.push('/dashboard'), 1500);
+        if (!email || !password || !firstName || !lastName) {
+          throw new Error('Todos los campos son requeridos');
+        }
+        signup(email, firstName, lastName, password);
+        setError('Cuenta creada. Redirigiendo...');
+        setTimeout(() => router.push('/dashboard'), 500);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+        if (!email || !password) {
+          throw new Error('Email y contraseña requeridos');
+        }
+        login(email, password);
         router.push('/dashboard');
       }
     } catch (err) {

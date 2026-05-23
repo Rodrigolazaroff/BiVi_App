@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { buildSystemPrompt } from '@/lib/systemPrompt';
-import { createClient } from '@/lib/supabase/client';
 
 type State = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -12,22 +11,32 @@ interface Message {
 }
 
 interface Elder {
-  id: string;
   full_name: string;
   age: number;
   favorite_topics: string[];
 }
 
-export default function TalkClient({ elder, userId }: { elder: Elder; userId: string }) {
+export default function TalkClient() {
+  const [elder, setElder] = useState<Elder | null>(null);
   const [state, setState] = useState<State>('idle');
   const [history, setHistory] = useState<Message[]>([]);
   const [error, setError] = useState('');
   const recognitionRef = useRef<any>(null);
-  const currentSessionRef = useRef<string | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const supabaseRef = useRef(createClient());
 
-  const systemPrompt = buildSystemPrompt(elder.full_name, elder.age, elder.favorite_topics);
+  // Load elder from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('bivi_elder');
+    if (stored) {
+      try {
+        setElder(JSON.parse(stored));
+      } catch (e) {
+        setError('Error cargando datos del adulto mayor');
+      }
+    }
+  }, []);
+
+  const systemPrompt = elder ? buildSystemPrompt(elder.full_name, elder.age, elder.favorite_topics) : '';
 
   // Init speech recognition
   useEffect(() => {
@@ -47,22 +56,9 @@ export default function TalkClient({ elder, userId }: { elder: Elder; userId: st
 
   // Request mic permission and start session
   const startSession = useCallback(async () => {
-    if (state !== 'idle') return;
+    if (state !== 'idle' || !elder) return;
 
     try {
-      // Create session in DB
-      const { data: sessionData, error: sessionError } = await supabaseRef.current
-        .from('sessions')
-        .insert({
-          elder_id: elder.id,
-          status: 'in_progress',
-        })
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-      currentSessionRef.current = sessionData.id;
-
       setState('speaking');
 
       // Greeting
@@ -91,29 +87,15 @@ export default function TalkClient({ elder, userId }: { elder: Elder; userId: st
     });
   };
 
-  const endSession = useCallback(async () => {
+  const endSession = useCallback(() => {
     try {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
       window.speechSynthesis.cancel();
 
-      if (currentSessionRef.current) {
-        const { error: updateError } = await supabaseRef.current
-          .from('sessions')
-          .update({
-            ended_at: new Date().toISOString(),
-            status: 'completed',
-            duration_seconds: 0, // TODO: calculate from started_at
-          })
-          .eq('id', currentSessionRef.current);
-
-        if (updateError) console.error('Update session error:', updateError);
-      }
-
       setState('idle');
       setHistory([]);
-      currentSessionRef.current = null;
     } catch (err) {
       console.error('End session error:', err);
     }
@@ -209,6 +191,14 @@ export default function TalkClient({ elder, userId }: { elder: Elder; userId: st
         return '¿Conversamos?';
     }
   };
+
+  if (!elder) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+        <p className="text-gray-600">Cargando datos del adulto mayor...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">

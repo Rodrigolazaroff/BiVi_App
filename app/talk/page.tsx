@@ -1,31 +1,35 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import TalkClient from './client';
 
-export const metadata = {
-  title: 'Conversa | BiVi',
-};
+export default function TalkPage() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
 
-export default async function TalkPage() {
-  const supabase = await createClient();
+  useEffect(() => {
+    if (isLoading) return;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
-  if (!user) {
-    redirect('/login');
+    const elder = localStorage.getItem('bivi_elder');
+    if (!elder) {
+      router.push('/dashboard');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+        <p className="text-gray-600">Cargando...</p>
+      </main>
+    );
   }
 
-  const { data: elder, error } = await supabase
-    .from('elders')
-    .select('*')
-    .eq('profile_id', user.id)
-    .single();
-
-  if (error || !elder) {
-    redirect('/dashboard');
-  }
-
-  return <TalkClient elder={elder} userId={user.id} />;
+  return <TalkClient />;
 }

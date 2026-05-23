@@ -1,7 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import TalkClient from './client';
 
-export default async function Home() {
+export const metadata = {
+  title: 'Conversa | BiVi',
+};
+
+export default async function TalkPage() {
   const supabase = await createClient();
 
   const {
@@ -12,15 +17,15 @@ export default async function Home() {
     redirect('/login');
   }
 
-  const { data: elder } = await supabase
+  const { data: elder, error } = await supabase
     .from('elders')
-    .select('id')
+    .select('*')
     .eq('profile_id', user.id)
     .single();
 
-  if (!elder) {
+  if (error || !elder) {
     redirect('/dashboard');
   }
 
-  redirect('/talk');
+  return <TalkClient elder={elder} userId={user.id} />;
 }

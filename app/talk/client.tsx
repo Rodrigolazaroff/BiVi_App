@@ -36,6 +36,8 @@ export default function TalkClient() {
   const [error, setError] = useState('');
   const recognitionRef = useRef<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const stateRef = useRef<State>('idle');
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fallback: load from localStorage after hydration
   useEffect(() => {
@@ -53,6 +55,17 @@ export default function TalkClient() {
 
   const systemPrompt = elder ? buildSystemPrompt(elder.full_name, elder.age, elder.favorite_topics) : '';
 
+  // Keep stateRef in sync so onend closure always reads current state
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const showError = (msg: string) => {
+    setError(msg);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => setError(''), 5000);
+  };
+
   // Init speech recognition
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -62,7 +75,7 @@ export default function TalkClient() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-AR';
+    recognition.lang = 'es-ES';
     recognition.continuous = true;
     recognition.interimResults = true;
 
@@ -93,16 +106,15 @@ export default function TalkClient() {
   const speakText = (text: string): Promise<void> => {
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-AR';
+      utterance.lang = 'es-ES';
       utterance.rate = 0.9;
 
       // Get voices with a small delay to ensure they're loaded
       const setVoice = () => {
         const voices = window.speechSynthesis.getVoices();
         if (voices.length > 0) {
-          // First try to find es-AR voice
-          let spanishVoice = voices.find((v) => v.lang.startsWith('es-AR'));
-          // Then try any Spanish voice
+          // First try to find es-ES voice, then any Spanish voice
+          let spanishVoice = voices.find((v) => v.lang.startsWith('es-ES'));
           if (!spanishVoice) {
             spanishVoice = voices.find((v) => v.lang.startsWith('es'));
           }
@@ -162,14 +174,17 @@ export default function TalkClient() {
     };
 
     recognitionRef.current.onerror = (event: any) => {
-      if (event.error !== 'no-speech') {
-        setError(`Error de reconocimiento: ${event.error}`);
+      // Errors that are safe to ignore — recognition will restart via onend
+      const silentErrors = ['no-speech', 'aborted', 'network'];
+      if (!silentErrors.includes(event.error)) {
+        showError(`Error de reconocimiento: ${event.error}`);
       }
     };
 
     recognitionRef.current.onend = () => {
-      if (state === 'listening') {
-        recognitionRef.current.start(); // Restart to keep listening
+      if (stateRef.current === 'listening') {
+        // Small delay avoids rapid restart loops on network errors
+        setTimeout(() => recognitionRef.current?.start(), 300);
       }
     };
   }, [state]);
@@ -195,7 +210,10 @@ export default function TalkClient() {
           }),
         });
 
-        if (!response.ok) throw new Error('Chat error');
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error || 'Error al conectar con BiVi');
+        }
         const { reply, history: updatedHistory } = await response.json();
         setHistory(updatedHistory);
 
@@ -208,7 +226,7 @@ export default function TalkClient() {
           recognitionRef.current.start();
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Chat error');
+        showError(err instanceof Error ? err.message : 'Error al conectar con BiVi');
         setState('idle');
       }
     },
@@ -281,8 +299,9 @@ export default function TalkClient() {
       )}
 
       {error && (
-        <div className="fixed top-4 left-4 right-4 bg-red-100 text-red-800 p-4 rounded-lg">
-          {error}
+        <div className="fixed top-16 left-4 right-4 bg-red-100 text-red-800 p-3 rounded-lg flex items-start gap-2">
+          <span className="flex-1 text-sm">{error}</span>
+          <button onClick={() => setError('')} className="text-red-600 font-bold text-lg leading-none shrink-0">×</button>
         </div>
       )}
     </main>

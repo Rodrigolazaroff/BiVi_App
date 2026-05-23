@@ -1,15 +1,22 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json(
+        { error: 'API key de Gemini no configurada en el servidor' },
+        { status: 500 }
+      );
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
     const { userMessage, history, systemPrompt } = await request.json();
 
     if (!userMessage || !systemPrompt) {
       return NextResponse.json(
-        { error: 'Missing userMessage or systemPrompt' },
+        { error: 'Faltan datos en la solicitud' },
         { status: 400 }
       );
     }
@@ -43,9 +50,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Chat error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Chat error' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Error interno del servidor';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

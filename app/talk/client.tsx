@@ -38,6 +38,7 @@ export default function TalkClient() {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const stateRef = useRef<State>('idle');
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleUserMessageRef = useRef<(text: string) => void>(() => {});
 
   // Fallback: load from localStorage after hydration
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function TalkClient() {
 
   const systemPrompt = elder ? buildSystemPrompt(elder.full_name, elder.age, elder.favorite_topics) : '';
 
-  // Keep stateRef in sync so onend closure always reads current state
+  // Keep refs in sync so closures always read the latest values
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -167,8 +168,7 @@ export default function TalkClient() {
       }
 
       if (finalTranscript) {
-        // Send to API
-        handleUserMessage(finalTranscript.trim());
+        handleUserMessageRef.current(finalTranscript.trim());
         finalTranscript = '';
       }
     };
@@ -232,6 +232,11 @@ export default function TalkClient() {
     },
     [state, history, systemPrompt]
   );
+
+  // Keep ref in sync — onresult closure always calls the latest version
+  useEffect(() => {
+    handleUserMessageRef.current = handleUserMessage;
+  }, [handleUserMessage]);
 
   const getStatusText = () => {
     switch (state) {

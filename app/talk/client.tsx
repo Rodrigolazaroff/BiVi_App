@@ -80,8 +80,17 @@ export default function TalkClient() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-AR';
       utterance.rate = 0.9;
-      utteranceRef.current = utterance;
 
+      // Force Spanish voice
+      const voices = window.speechSynthesis.getVoices();
+      const spanishVoice = voices.find(
+        (v) => v.lang.includes('es') || v.name.toLowerCase().includes('spanish')
+      );
+      if (spanishVoice) {
+        utterance.voice = spanishVoice;
+      }
+
+      utteranceRef.current = utterance;
       utterance.onend = () => resolve();
       window.speechSynthesis.speak(utterance);
     });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { buildSystemPrompt } from '@/lib/systemPrompt';
 
 type State = 'idle' | 'listening' | 'thinking' | 'speaking';
@@ -17,6 +18,7 @@ interface Elder {
 }
 
 export default function TalkClient() {
+  const router = useRouter();
   const [elder, setElder] = useState<Elder | null>(() => {
     if (typeof window === 'undefined') return null;
     const stored = localStorage.getItem('bivi_elder');
@@ -236,6 +238,14 @@ export default function TalkClient() {
 
   return (
     <main className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+      {/* Back button */}
+      <button
+        onClick={() => router.push('/dashboard')}
+        className="fixed top-4 left-4 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition"
+      >
+        ← Volver
+      </button>
+
       {/* Main button */}
       <div className="flex flex-col items-center justify-center flex-1 w-full">
         <button

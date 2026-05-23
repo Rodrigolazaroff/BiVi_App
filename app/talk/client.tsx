@@ -17,21 +17,34 @@ interface Elder {
 }
 
 export default function TalkClient() {
-  const [elder, setElder] = useState<Elder | null>(null);
+  const [elder, setElder] = useState<Elder | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem('bivi_elder');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [state, setState] = useState<State>('idle');
   const [history, setHistory] = useState<Message[]>([]);
   const [error, setError] = useState('');
   const recognitionRef = useRef<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Load elder from localStorage
+  // Fallback: load from localStorage after hydration
   useEffect(() => {
-    const stored = localStorage.getItem('bivi_elder');
-    if (stored) {
-      try {
-        setElder(JSON.parse(stored));
-      } catch (e) {
-        setError('Error cargando datos del adulto mayor');
+    if (!elder) {
+      const stored = localStorage.getItem('bivi_elder');
+      if (stored) {
+        try {
+          setElder(JSON.parse(stored));
+        } catch (e) {
+          setError('Error cargando datos del adulto mayor');
+        }
       }
     }
   }, []);
@@ -81,15 +94,27 @@ export default function TalkClient() {
       utterance.lang = 'es-AR';
       utterance.rate = 0.9;
 
-      // Force Spanish voice
-      const voices = window.speechSynthesis.getVoices();
-      const spanishVoice = voices.find(
-        (v) => v.lang.includes('es') || v.name.toLowerCase().includes('spanish')
-      );
-      if (spanishVoice) {
-        utterance.voice = spanishVoice;
-      }
+      // Get voices with a small delay to ensure they're loaded
+      const setVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          // First try to find es-AR voice
+          let spanishVoice = voices.find((v) => v.lang.startsWith('es-AR'));
+          // Then try any Spanish voice
+          if (!spanishVoice) {
+            spanishVoice = voices.find((v) => v.lang.startsWith('es'));
+          }
+          // Fall back to any voice with 'spanish' in the name
+          if (!spanishVoice) {
+            spanishVoice = voices.find((v) => v.name.toLowerCase().includes('spanish'));
+          }
+          if (spanishVoice) {
+            utterance.voice = spanishVoice;
+          }
+        }
+      };
 
+      setVoice();
       utteranceRef.current = utterance;
       utterance.onend = () => resolve();
       window.speechSynthesis.speak(utterance);

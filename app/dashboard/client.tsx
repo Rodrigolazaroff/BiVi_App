@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import InstallButton from '@/components/InstallButton';
 import { useAuth } from '@/lib/auth-context';
 
@@ -11,6 +12,7 @@ interface Elder {
 }
 
 export default function DashboardClient() {
+  const router = useRouter();
   const { logout } = useAuth();
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
@@ -77,7 +79,7 @@ export default function DashboardClient() {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
           />
 
           <input
@@ -88,7 +90,7 @@ export default function DashboardClient() {
             min="18"
             max="150"
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
           />
 
           <div className="space-y-2">
@@ -104,7 +106,7 @@ export default function DashboardClient() {
                   newTopics[idx] = e.target.value;
                   setTopics(newTopics);
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
               />
             ))}
           </div>
@@ -120,6 +122,15 @@ export default function DashboardClient() {
 
         {error && <div className="mt-4 p-4 bg-red-100 text-red-800 rounded-lg">{error}</div>}
         {success && <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg">{success}</div>}
+
+        {fullName && (
+          <button
+            onClick={() => router.push('/talk')}
+            className="w-full mt-4 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            ¿Conversamos?
+          </button>
+        )}
       </div>
 
       {/* Instalación PWA */}

@@ -1,60 +1,78 @@
-const CACHE_NAME = 'bivi-v1';
-const urlsToCache = ['/', '/talk'];
+// Subir esta version cuando cambie la estrategia de cache: al activarse borra
+// todo lo guardado con nombres anteriores.
+const CACHE_NAME = 'bivi-v2';
+
+// Pantalla de respaldo cuando se abre la PWA sin conexion.
+const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache).catch(() => {
-        // Offline mode — not critical for MVP
-      });
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL).catch(() => {}))
   );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      )
   );
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first for API calls
-  if (event.request.url.includes('/api/')) {
+  const { request } = event;
+
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // Nunca cachear otro origen ni las llamadas de autenticacion: una sesion
+  // servida desde cache es una sesion equivocada.
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return;
+
+  // HTML: siempre red primero. Con cache-first, un deploy nuevo no llegaba
+  // nunca a quien ya habia abierto la app.
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const cache = caches.open(CACHE_NAME);
-            cache.then((c) => c.put(event.request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request);
-        })
+      fetch(request).catch(() => caches.match(OFFLINE_URL).then((r) => r ?? Response.error()))
     );
     return;
   }
 
-  // Cache first for other assets
+  // Estaticos de Next: el nombre lleva hash, asi que si esta en cache es la
+  // version correcta y no hace falta ir a la red.
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ??
+          fetch(request).then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            }
+            return response;
+          })
+      )
+    );
+    return;
+  }
+
+  // Resto (iconos, imagenes): red primero, cache como respaldo offline.
   event.respondWith(
-    caches
-      .match(event.request)
+    fetch(request)
       .then((response) => {
-        return response || fetch(event.request);
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
       })
-      .catch(() => {
-        return new Response('Offline', { status: 503 });
-      })
+      .catch(() => caches.match(request).then((r) => r ?? Response.error()))
   );
 });

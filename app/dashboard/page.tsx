@@ -1,33 +1,29 @@
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
+import { createClient } from '@/lib/supabase/server';
 import DashboardClient from './client';
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { user, isLoading } = useAuth();
+/**
+ * El control de acceso ya lo hizo proxy.ts, asi que aca no hace falta el
+ * chequeo de sesion en el cliente ni la pantalla intermedia de "Cargando...".
+ */
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isLoading, router]);
-
-  if (isLoading || !user) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-        <p className="text-gray-600">Cargando...</p>
-      </main>
-    );
-  }
+  const meta = user?.user_metadata ?? {};
+  const firstName: string =
+    meta.first_name || String(meta.full_name ?? meta.name ?? '').split(' ')[0] || '';
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <div className="max-w-2xl mx-auto py-8">
-        <h1 className="text-4xl font-bold text-blue-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600 mb-8">Datos del adulto mayor</p>
+    <main className="min-h-screen bg-gradient-to-b from-bivi-blue-soft via-bivi-bg to-bivi-green-soft/40 px-4 py-10">
+      <div className="mx-auto max-w-xl">
+        <header className="mb-8">
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-bivi-text">
+            {firstName ? `Hola, ${firstName}` : 'Tu panel'}
+          </h1>
+          <p className="mt-1 text-bivi-muted">Panel de administración de BiVi</p>
+        </header>
 
         <DashboardClient />
       </div>

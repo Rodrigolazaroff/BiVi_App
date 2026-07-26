@@ -1,150 +1,228 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import InstallButton from '@/components/InstallButton';
 import { useAuth } from '@/lib/auth-context';
-
-interface Elder {
-  full_name: string;
-  age: number;
-  favorite_topics: string[];
-}
+import { createClient } from '@/lib/supabase/client';
+import type { Elder } from '@/lib/elder';
 
 export default function DashboardClient() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
+
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [topics, setTopics] = useState<[string, string, string]>(['', '', '']);
+  const [savedName, setSavedName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Load from localStorage on mount
+  // Trae la ficha desde Supabase. RLS ya limita el resultado al elder propio.
   useEffect(() => {
-    const stored = localStorage.getItem('bivi_elder');
-    if (stored) {
-      try {
-        const elder: Elder = JSON.parse(stored);
-        setFullName(elder.full_name);
-        setAge(elder.age.toString());
+    let active = true;
+
+    async function load() {
+      const { data, error: loadError } = await supabase
+        .from('elders')
+        .select('id, profile_id, full_name, age, favorite_topics')
+        .maybeSingle<Elder>();
+
+      if (!active) return;
+
+      if (loadError) {
+        setError('No pudimos cargar los datos. Recargá la página.');
+      } else if (data) {
+        setFullName(data.full_name);
+        setSavedName(data.full_name);
+        setAge(String(data.age));
         setTopics([
-          elder.favorite_topics[0] || '',
-          elder.favorite_topics[1] || '',
-          elder.favorite_topics[2] || '',
-        ] as [string, string, string]);
-      } catch (e) {
-        console.error('Failed to load elder:', e);
+          data.favorite_topics[0] ?? '',
+          data.favorite_topics[1] ?? '',
+          data.favorite_topics[2] ?? '',
+        ]);
       }
+      setLoading(false);
     }
-  }, []);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setSaving(true);
+    load();
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
-    try {
+  const handleSave = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      setSuccess('');
+
+      if (!user) {
+        setError('Tu sesión expiró. Volvé a ingresar.');
+        return;
+      }
       if (!fullName.trim() || !age) {
-        throw new Error('Nombre y edad son requeridos');
+        setError('El nombre y la edad son obligatorios.');
+        return;
       }
 
-      const elder: Elder = {
-        full_name: fullName,
-        age: parseInt(age),
-        favorite_topics: topics.filter(Boolean),
-      };
+      setSaving(true);
 
-      localStorage.setItem('bivi_elder', JSON.stringify(elder));
-      setSuccess('Datos guardados correctamente');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
-    } finally {
+      // upsert sobre profile_id: la tabla tiene UNIQUE ahi, asi que el mismo
+      // formulario sirve para crear la ficha y para editarla.
+      const { error: saveError } = await supabase.from('elders').upsert(
+        {
+          profile_id: user.id,
+          full_name: fullName.trim(),
+          age: Number(age),
+          favorite_topics: topics.map((t) => t.trim()).filter(Boolean),
+        },
+        { onConflict: 'profile_id' }
+      );
+
+      if (saveError) {
+        setError('No pudimos guardar los cambios. Probá de nuevo.');
+      } else {
+        setSavedName(fullName.trim());
+        setSuccess('Datos guardados correctamente.');
+      }
       setSaving(false);
-    }
-  };
+    },
+    [supabase, user, fullName, age, topics]
+  );
+
+  const inputClass =
+    'w-full rounded-xl border border-bivi-border bg-white px-4 py-3 text-bivi-text ' +
+    'placeholder:text-bivi-muted/60 transition focus:border-bivi-blue focus:outline-none ' +
+    'focus:ring-2 focus:ring-bivi-blue/30 disabled:opacity-60';
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-bivi-border/70 bg-white p-8 shadow-sm">
+        <p className="text-bivi-muted">Cargando la ficha...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Ficha del adulto */}
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <h2 className="text-2xl font-bold text-blue-900 mb-6">Ficha del adulto mayor</h2>
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+        <h2 className="font-display text-2xl font-semibold text-bivi-text">
+          Ficha del adulto mayor
+        </h2>
+        <p className="mt-1 mb-6 text-bivi-muted">
+          Con estos datos BiVi sabe con quién está hablando.
+        </p>
 
-        <form onSubmit={handleSave} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Nombre completo"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-          />
+        <form onSubmit={handleSave} className="space-y-4" noValidate>
+          <div>
+            <label htmlFor="fullName" className="mb-1.5 block text-sm font-bold text-bivi-text">
+              Nombre completo
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              placeholder="Juan Pérez"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              disabled={saving}
+              className={inputClass}
+            />
+          </div>
 
-          <input
-            type="number"
-            placeholder="Edad"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            min="18"
-            max="150"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-          />
+          <div>
+            <label htmlFor="age" className="mb-1.5 block text-sm font-bold text-bivi-text">
+              Edad
+            </label>
+            <input
+              id="age"
+              type="number"
+              placeholder="78"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              min="18"
+              max="120"
+              required
+              disabled={saving}
+              className={inputClass}
+            />
+          </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">Temas favoritos (máximo 3)</label>
-            {[0, 1, 2].map((idx) => (
-              <input
-                key={idx}
-                type="text"
-                placeholder={`Tema ${idx + 1}`}
-                value={topics[idx]}
-                onChange={(e) => {
-                  const newTopics = [...topics] as [string, string, string];
-                  newTopics[idx] = e.target.value;
-                  setTopics(newTopics);
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-              />
-            ))}
+          <fieldset>
+            <legend className="mb-1.5 block text-sm font-bold text-bivi-text">
+              Temas favoritos
+            </legend>
+            <p className="mb-2 text-sm text-bivi-muted">
+              Hasta tres. Son los temas con los que BiVi arranca la charla.
+            </p>
+            <div className="space-y-2">
+              {[0, 1, 2].map((idx) => (
+                <input
+                  key={idx}
+                  type="text"
+                  aria-label={`Tema favorito ${idx + 1}`}
+                  placeholder={
+                    ['fútbol, San Lorenzo', 'sus nietos', 'tango y milonga'][idx]
+                  }
+                  value={topics[idx]}
+                  onChange={(e) => {
+                    const next = [...topics] as [string, string, string];
+                    next[idx] = e.target.value;
+                    setTopics(next);
+                  }}
+                  disabled={saving}
+                  className={inputClass}
+                />
+              ))}
+            </div>
+          </fieldset>
+
+          <div aria-live="polite">
+            {error && (
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+                {error}
+              </p>
+            )}
+            {success && (
+              <p className="rounded-xl bg-bivi-green-soft px-4 py-3 text-sm font-bold text-bivi-green-dark">
+                {success}
+              </p>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white shadow-sm transition hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
           >
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>
 
-        {error && <div className="mt-4 p-4 bg-red-100 text-red-800 rounded-lg">{error}</div>}
-        {success && <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg">{success}</div>}
-
-        {fullName && (
+        {savedName && (
           <button
             onClick={() => router.push('/talk')}
-            className="w-full mt-4 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+            className="mt-3 w-full rounded-xl bg-bivi-green px-4 py-3.5 font-bold text-white shadow-sm transition hover:bg-bivi-green-dark active:scale-[0.99]"
           >
             ¿Conversamos?
           </button>
         )}
-      </div>
+      </section>
 
-      {/* Instalación PWA */}
-      {fullName && <InstallButton elderName={fullName} />}
+      {savedName && <InstallButton elderName={savedName} />}
 
-      {/* Logout */}
-      <div className="bg-white rounded-2xl shadow-xl p-8">
+      <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-sm sm:p-8">
         <button
           onClick={logout}
-          className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition"
+          className="w-full rounded-xl border border-bivi-border px-4 py-3 font-bold text-bivi-muted transition hover:bg-bivi-bg hover:text-bivi-text"
         >
           Cerrar sesión
         </button>
-      </div>
+      </section>
     </div>
   );
 }

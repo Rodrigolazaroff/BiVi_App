@@ -1,31 +1,24 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
+/**
+ * Puerta de entrada. Se resuelve en el servidor para que no haya un
+ * "Cargando..." intermedio antes del redirect.
+ *
+ * Sin ficha cargada -> el cuidador tiene que completarla.
+ * Con ficha cargada -> se va derecho a conversar, que es como abre la PWA
+ * instalada en el celular del adulto mayor.
+ */
+export default async function Home() {
+  const supabase = await createClient();
 
-export default function Home() {
-  const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    if (isLoading) return;
+  if (!user) redirect('/login');
 
-    if (!user) {
-      router.push('/login');
-    } else {
-      const elder = localStorage.getItem('bivi_elder');
-      if (!elder) {
-        router.push('/dashboard');
-      } else {
-        router.push('/talk');
-      }
-    }
-  }, [user, isLoading, router]);
+  const { data: elder } = await supabase.from('elders').select('id').maybeSingle();
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-      <p className="text-gray-600">Cargando...</p>
-    </div>
-  );
+  redirect(elder ? '/talk' : '/dashboard');
 }

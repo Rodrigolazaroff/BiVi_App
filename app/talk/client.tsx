@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildSystemPrompt } from '@/lib/systemPrompt';
+import type { ElderProfile } from '@/lib/elder';
 
 type State = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -11,26 +12,8 @@ interface Message {
   content: string;
 }
 
-interface Elder {
-  full_name: string;
-  age: number;
-  favorite_topics: string[];
-}
-
-export default function TalkClient() {
+export default function TalkClient({ elder }: { elder: ElderProfile }) {
   const router = useRouter();
-  const [elder, setElder] = useState<Elder | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const stored = localStorage.getItem('bivi_elder');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
   const [state, setState] = useState<State>('idle');
   const [history, setHistory] = useState<Message[]>([]);
   const [error, setError] = useState('');
@@ -40,21 +23,12 @@ export default function TalkClient() {
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleUserMessageRef = useRef<(text: string) => void>(() => {});
 
-  // Fallback: load from localStorage after hydration
-  useEffect(() => {
-    if (!elder) {
-      const stored = localStorage.getItem('bivi_elder');
-      if (stored) {
-        try {
-          setElder(JSON.parse(stored));
-        } catch (e) {
-          setError('Error cargando datos del adulto mayor');
-        }
-      }
-    }
-  }, []);
-
-  const systemPrompt = elder ? buildSystemPrompt(elder.full_name, elder.age, elder.favorite_topics) : '';
+  // La ficha llega desde el servidor, asi que el prompt esta listo de entrada.
+  const systemPrompt = buildSystemPrompt(
+    elder.full_name,
+    elder.age,
+    elder.favorite_topics
+  );
 
   // Keep refs in sync so closures always read the latest values
   useEffect(() => {
@@ -85,7 +59,7 @@ export default function TalkClient() {
 
   // Request mic permission and start session
   const startSession = useCallback(async () => {
-    if (state !== 'idle' || !elder) return;
+    if (state !== 'idle') return;
 
     try {
       setState('speaking');
@@ -250,14 +224,6 @@ export default function TalkClient() {
         return '¿Conversamos?';
     }
   };
-
-  if (!elder) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-        <p className="text-gray-600">Cargando datos del adulto mayor...</p>
-      </main>
-    );
-  }
 
   return (
     <main className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">

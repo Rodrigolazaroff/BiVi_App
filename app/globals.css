@@ -1,36 +1,47 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  Identidad BiVi. Los valores son los mismos de la landing (repo BiVi/index.html)
+  para que la app y el sitio se vean como un solo producto.
+*/
+@theme {
+  --color-bivi-blue: #1b75bc;
+  --color-bivi-blue-dark: #155a9a;
+  --color-bivi-blue-soft: #ebf4fa;
+  --color-bivi-green: #6cb33f;
+  --color-bivi-green-dark: #559130;
+  --color-bivi-green-soft: #ebf5e8;
+  --color-bivi-bg: #f4f8fb;
+  --color-bivi-text: #1a2e3b;
+  --color-bivi-muted: #5a7a8a;
+  --color-bivi-border: #d9e6f0;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-atkinson), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
+  background: var(--color-bivi-bg);
+  color: var(--color-bivi-text);
+  font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Touch-friendly elements */
-button, input, a {
+/*
+  El texto de la interfaz no se selecciona (se siente app, no pagina), pero los
+  campos y el contenido conversacional si: el cuidador necesita poder copiar.
+*/
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+button,
+input,
+textarea,
+a,
+[data-selectable] {
   -webkit-user-select: text;
   user-select: text;
 }
@@ -41,11 +52,29 @@ input::-webkit-inner-spin-button {
   margin: 0;
 }
 
-input[type=number] {
+input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Prevent zoom on input focus in iOS */
-input, select, textarea {
+/* 16px es el minimo que evita que iOS haga zoom al enfocar un campo. */
+input,
+select,
+textarea {
   font-size: 16px;
+}
+
+/* Foco visible y consistente: se navega con teclado y con lector de pantalla. */
+:focus-visible {
+  outline: 2px solid var(--color-bivi-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

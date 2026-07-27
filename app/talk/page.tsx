@@ -13,7 +13,7 @@ export default async function TalkPage() {
 
   const { data: elder } = await supabase
     .from('elders')
-    .select('full_name, age, favorite_topics')
+    .select('id, full_name, age, favorite_topics')
     .maybeSingle<ElderProfile>();
 
   // Sin ficha no hay con quien conversar: primero hay que completarla.

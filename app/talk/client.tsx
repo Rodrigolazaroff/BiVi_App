@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from '
 import { useRouter } from 'next/navigation';
 import { buildSystemPrompt } from '@/lib/systemPrompt';
 import type { ElderProfile } from '@/lib/elder';
+import { iniciarSesion, terminarSesion } from '@/lib/sessions';
 import {
   SpeechError,
   crearReconocimiento,
@@ -35,6 +36,8 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const stateRef = useRef<State>('idle');
   const handleUserMessageRef = useRef<(text: string) => void>(() => {});
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionStartRef = useRef<number>(0);
 
   // La ficha llega desde el servidor, asi que el prompt esta listo de entrada.
   const systemPrompt = buildSystemPrompt(
@@ -108,6 +111,11 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
       // llegaria como un codigo tecnico en medio de la conversacion.
       await pedirMicrofono();
 
+      // Se registra recien cuando el microfono ya esta concedido, para no
+      // contar como conversacion un intento que nunca llego a arrancar.
+      sessionStartRef.current = Date.now();
+      sessionIdRef.current = await iniciarSesion(elder.id);
+
       setState('speaking');
       await speak(`Hola ${elder.full_name}, ¿cómo andás hoy?`, voiceRef.current);
 
@@ -121,18 +129,25 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
       );
       setState('idle');
     }
-  }, [elder.full_name, state, showError]);
+  }, [elder.full_name, elder.id, state, showError]);
 
-  const endSession = useCallback(() => {
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      // Puede no estar escuchando; no importa.
-    }
-    window.speechSynthesis.cancel();
-    setState('idle');
-    setHistory([]);
-  }, []);
+  const endSession = useCallback(
+    (status: 'completed' | 'error' = 'completed') => {
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Puede no estar escuchando; no importa.
+      }
+      window.speechSynthesis.cancel();
+
+      terminarSesion(sessionIdRef.current, sessionStartRef.current, status);
+      sessionIdRef.current = null;
+
+      setState('idle');
+      setHistory([]);
+    },
+    []
+  );
 
   // Handlers del reconocimiento
   useEffect(() => {
@@ -208,10 +223,12 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
             ? err.message
             : 'Se cortó la conexión. Tocá el botón para seguir conversando.'
         );
-        setState('idle');
+        // Queda registrada como 'error' para distinguirla, en el seguimiento,
+        // de una charla que la persona termino por su cuenta.
+        endSession('error');
       }
     },
-    [state, history, systemPrompt, showError]
+    [state, history, systemPrompt, showError, endSession]
   );
 
   useEffect(() => {
@@ -268,7 +285,9 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
 
       {state !== 'idle' && (
         <button
-          onClick={endSession}
+          /* Envuelto a proposito: pasar endSession directo le mandaria el
+             evento del click como si fuera el estado de cierre. */
+          onClick={() => endSession()}
           className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-full font-semibold text-lg transition"
         >
           Terminar

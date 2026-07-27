@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+import ResumenUso from '@/components/ResumenUso';
+import { resumirUso, type SesionResumen } from '@/lib/uso';
 import DashboardClient from './client';
 
 /**
@@ -15,6 +17,27 @@ export default async function DashboardPage() {
   const firstName: string =
     meta.first_name || String(meta.full_name ?? meta.name ?? '').split(' ')[0] || '';
 
+  // El resumen se arma en el servidor: son datos de solo lectura y asi ya
+  // llegan renderizados, sin un salto de carga en el panel.
+  const { data: elder } = await supabase.from('elders').select('full_name').maybeSingle();
+
+  const { data: sesiones } = await supabase
+    .from('sessions')
+    .select('started_at, duration_seconds, status')
+    .order('started_at', { ascending: false })
+    .limit(30);
+
+  /*
+   * Leer el reloj es impuro, y por eso el linter lo marca. Aca es intencional:
+   * este componente ya es asincronico e impuro (consulta la base), se ejecuta
+   * una sola vez en el servidor y no se hidrata, asi que no hay riesgo de que
+   * cliente y servidor muestren horas distintas. Sellar el momento aca y
+   * pasarlo hacia abajo mantiene puros a los componentes que lo reciben.
+   */
+  // eslint-disable-next-line react-hooks/purity
+  const ahora = Date.now();
+  const resumen = resumirUso((sesiones ?? []) as SesionResumen[], ahora);
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-bivi-blue-soft via-bivi-bg to-bivi-green-soft/40 px-4 py-10">
       <div className="mx-auto max-w-xl">
@@ -25,7 +48,16 @@ export default async function DashboardPage() {
           <p className="mt-1 text-bivi-muted">Panel de administración de BiVi</p>
         </header>
 
-        <DashboardClient />
+        <div className="space-y-6">
+          {elder && (
+            <ResumenUso
+              resumen={resumen}
+              nombre={elder.full_name as string}
+              ahora={ahora}
+            />
+          )}
+          <DashboardClient />
+        </div>
       </div>
     </main>
   );

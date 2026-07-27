@@ -7,5 +7,5 @@ export interface Elder {
   favorite_topics: string[];
 }
 
-/** Lo que se necesita para armar el prompt en /talk. */
-export type ElderProfile = Pick<Elder, 'full_name' | 'age' | 'favorite_topics'>;
+/** Lo que necesita /talk: armar el prompt y registrar la conversacion. */
+export type ElderProfile = Pick<Elder, 'id' | 'full_name' | 'age' | 'favorite_topics'>;

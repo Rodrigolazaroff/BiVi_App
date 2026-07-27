@@ -142,8 +142,13 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
       }
 
       if (finalTranscript) {
-        handleUserMessageRef.current(finalTranscript.trim());
+        const text = finalTranscript.trim();
         finalTranscript = '';
+        // En el celular el reconocimiento a veces cierra un resultado "final"
+        // sin texto: detecta que alguien hablo pero no logra transcribir. Eso
+        // dejaba finalTranscript en " ", que pasaba este if y llegaba vacio al
+        // API. Si no quedo nada, se descarta y se sigue escuchando.
+        if (text) handleUserMessageRef.current(text);
       }
     };
 
@@ -166,6 +171,9 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
   const handleUserMessage = useCallback(
     async (userText: string) => {
       if (state !== 'listening') return;
+      // Red de seguridad: sin texto no hay nada que preguntarle al modelo, y
+      // enviarlo igual solo produce un 400 que el usuario ve como un error.
+      if (!userText.trim()) return;
 
       try {
         setState('thinking');

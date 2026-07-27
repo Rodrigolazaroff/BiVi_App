@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { buildSystemPrompt } from '@/lib/systemPrompt';
 import type { ElderProfile } from '@/lib/elder';
 import { iniciarSesion, terminarSesion } from '@/lib/sessions';
 import {
@@ -38,13 +37,6 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
   const handleUserMessageRef = useRef<(text: string) => void>(() => {});
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartRef = useRef<number>(0);
-
-  // La ficha llega desde el servidor, asi que el prompt esta listo de entrada.
-  const systemPrompt = buildSystemPrompt(
-    elder.full_name,
-    elder.age,
-    elder.favorite_topics
-  );
 
   useEffect(() => {
     stateRef.current = state;
@@ -198,15 +190,28 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
         setState('thinking');
         recognitionRef.current?.stop();
 
+        // El prompt lo arma el servidor con la ficha y los medicamentos: el
+        // navegador no deberia poder decidir las instrucciones del modelo.
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userMessage: userText, history, systemPrompt }),
+          body: JSON.stringify({ userMessage: userText, history }),
         });
 
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(body.error || 'No pudimos conectarnos con BiVi.');
+          const mensaje = body.error || 'No pudimos conectarnos con BiVi.';
+
+          // Pasarse de la cuota es una pausa, no una falla: se avisa y se sigue
+          // escuchando, en vez de dar por terminada la conversacion.
+          if (response.status === 429) {
+            showError(mensaje);
+            setState('listening');
+            iniciarReconocimiento(recognitionRef.current);
+            return;
+          }
+
+          throw new Error(mensaje);
         }
 
         const { reply, history: updatedHistory } = await response.json();
@@ -228,7 +233,7 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
         endSession('error');
       }
     },
-    [state, history, systemPrompt, showError, endSession]
+    [state, history, showError, endSession]
   );
 
   useEffect(() => {

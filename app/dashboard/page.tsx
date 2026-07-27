@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import ResumenUso from '@/components/ResumenUso';
+import Medicamentos from '@/components/Medicamentos';
 import { resumirUso, type SesionResumen } from '@/lib/uso';
+import type { Medicamento } from '@/lib/medicamentos';
 import DashboardClient from './client';
 
 /**
@@ -19,13 +21,19 @@ export default async function DashboardPage() {
 
   // El resumen se arma en el servidor: son datos de solo lectura y asi ya
   // llegan renderizados, sin un salto de carga en el panel.
-  const { data: elder } = await supabase.from('elders').select('full_name').maybeSingle();
+  const { data: elder } = await supabase.from('elders').select('id, full_name').maybeSingle();
 
   const { data: sesiones } = await supabase
     .from('sessions')
     .select('started_at, duration_seconds, status')
     .order('started_at', { ascending: false })
     .limit(30);
+
+  const { data: medicamentos } = await supabase
+    .from('medications')
+    .select('id, nombre, dosis, horarios, activo')
+    .eq('activo', true)
+    .order('created_at');
 
   /*
    * Leer el reloj es impuro, y por eso el linter lo marca. Aca es intencional:
@@ -57,6 +65,12 @@ export default async function DashboardPage() {
             />
           )}
           <DashboardClient />
+          {elder && (
+            <Medicamentos
+              elderId={elder.id as string}
+              iniciales={(medicamentos ?? []) as Medicamento[]}
+            />
+          )}
         </div>
       </div>
     </main>

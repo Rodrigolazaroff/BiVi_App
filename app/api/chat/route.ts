@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 async function buscarPendientes(supabase: any, elderId: string): Promise<TomaPendiente[]> {
   const { data: medicamentos } = await supabase
     .from('medications')
-    .select('id, nombre, dosis, horarios, activo')
+    .select('id, nombre, dosis, horarios, activo, desde, hasta')
     .eq('elder_id', elderId)
     .eq('activo', true);
 

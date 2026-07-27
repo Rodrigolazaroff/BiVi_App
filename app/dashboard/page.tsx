@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import ResumenUso from '@/components/ResumenUso';
 import Medicamentos from '@/components/Medicamentos';
 import { resumirUso, type SesionResumen } from '@/lib/uso';
-import type { Medicamento } from '@/lib/medicamentos';
+import { momentoLocal, type Medicamento } from '@/lib/medicamentos';
 import DashboardClient from './client';
 
 /**
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
 
   const { data: medicamentos } = await supabase
     .from('medications')
-    .select('id, nombre, dosis, horarios, activo')
+    .select('id, nombre, dosis, horarios, activo, desde, hasta')
     .eq('activo', true)
     .order('created_at');
 
@@ -45,6 +45,8 @@ export default async function DashboardPage() {
   // eslint-disable-next-line react-hooks/purity
   const ahora = Date.now();
   const resumen = resumirUso((sesiones ?? []) as SesionResumen[], ahora);
+  // El servidor de Vercel corre en UTC: "hoy" se calcula en hora de Argentina.
+  const { fecha: hoy } = momentoLocal(new Date(ahora));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-bivi-blue-soft via-bivi-bg to-bivi-green-soft/40 px-4 py-10">
@@ -69,6 +71,7 @@ export default async function DashboardPage() {
             <Medicamentos
               elderId={elder.id as string}
               iniciales={(medicamentos ?? []) as Medicamento[]}
+              hoy={hoy}
             />
           )}
         </div>

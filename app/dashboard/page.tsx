@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import ResumenUso from '@/components/ResumenUso';
 import Medicamentos from '@/components/Medicamentos';
+import Notificaciones from '@/components/Notificaciones';
 import { resumirUso, type SesionResumen } from '@/lib/uso';
 import { momentoLocal, type Medicamento } from '@/lib/medicamentos';
 import DashboardClient from './client';
@@ -74,6 +75,7 @@ export default async function DashboardPage() {
               hoy={hoy}
             />
           )}
+          {elder && <Notificaciones />}
         </div>
       </div>
     </main>

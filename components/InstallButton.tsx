@@ -7,7 +7,9 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export default function InstallButton({ elderName }: { elderName: string }) {
+export default function InstallButton({ elderName: nombre }: { elderName?: string }) {
+  // Sin ficha cargada todavia, el texto usa un generico en vez de un hueco.
+  const elderName = nombre || 'el adulto mayor';
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -23,13 +25,19 @@ export default function InstallButton({ elderName }: { elderName: string }) {
       setInstallPrompt(null);
     };
 
-    // Check if iOS
+    // Detectar iOS solo puede pasar en el cliente, despues de hidratar: en el
+    // servidor no hay navigator, y leerlo en el initializer del useState daria
+    // un mismatch de hidratacion. El re-render extra al montar es el costo.
     const ua = navigator.userAgent.toLowerCase();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsIOS(/iphone|ipad|ipod/.test(ua));
 
     // Check if already installed
-    if ((window.navigator as any).getInstalledRelatedApps) {
-      (window.navigator as any).getInstalledRelatedApps().then((apps: any[]) => {
+    const nav = window.navigator as Navigator & {
+      getInstalledRelatedApps?: () => Promise<unknown[]>;
+    };
+    if (nav.getInstalledRelatedApps) {
+      nav.getInstalledRelatedApps().then((apps) => {
         if (apps.length > 0) {
           setInstalled(true);
         }

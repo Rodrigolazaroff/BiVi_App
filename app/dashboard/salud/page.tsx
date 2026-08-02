@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import Medicamentos from '@/components/Medicamentos';
 import Notificaciones from '@/components/Notificaciones';
+import Documentos from '@/components/Documentos';
+import HistoriaClinica from '@/components/HistoriaClinica';
 import { momentoLocal, type Medicamento } from '@/lib/medicamentos';
+import type { Documento } from '@/lib/documentos';
 
 /**
  * Salud: medicamentos, recordatorios y (proximamente) documentos medicos.
@@ -12,13 +15,21 @@ export default async function SaludPage() {
 
   const { data: elder } = await supabase.from('elders').select('id, full_name').maybeSingle();
 
-  const { data: medicamentos } = elder
-    ? await supabase
-        .from('medications')
-        .select('id, nombre, dosis, horarios, activo, desde, hasta')
-        .eq('activo', true)
-        .order('created_at')
-    : { data: null };
+  const [{ data: medicamentos }, { data: documentos }] = elder
+    ? await Promise.all([
+        supabase
+          .from('medications')
+          .select('id, nombre, dosis, horarios, activo, desde, hasta')
+          .eq('activo', true)
+          .order('created_at'),
+        supabase
+          .from('documents')
+          .select(
+            'id, nombre, storage_path, mime_type, tamano, resumen, datos, procesado_en, created_at'
+          )
+          .order('created_at', { ascending: false }),
+      ])
+    : [{ data: null }, { data: null }];
 
   // eslint-disable-next-line react-hooks/purity
   const ahora = Date.now();
@@ -42,6 +53,11 @@ export default async function SaludPage() {
             hoy={hoy}
           />
           <Notificaciones />
+          <Documentos
+            elderId={elder.id as string}
+            iniciales={(documentos ?? []) as Documento[]}
+          />
+          <HistoriaClinica />
         </div>
       ) : (
         <section className="rounded-2xl border border-bivi-border/70 bg-white p-8 text-center shadow-xl shadow-bivi-blue/5">

@@ -78,3 +78,22 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Al imprimir, solo la historia clinica: el truco de visibility (y no display)
+ * mantiene el arbol renderizado, asi el contenido anidado puede volver a verse.
+ */
+@media print {
+  body {
+    visibility: hidden;
+  }
+  #zona-impresion,
+  #zona-impresion * {
+    visibility: visible;
+  }
+  #zona-impresion {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+}

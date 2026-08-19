@@ -3,33 +3,59 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { describirPeriodo, formatearHora, momentoLocal, type Medicamento } from '@/lib/medicamentos';
 import type { Documento } from '@/lib/documentos';
+import type {
+  EstudioItem,
+  Historia,
+  MedicacionItem,
+  SeccionesRedactadas,
+} from '@/lib/historia';
 
 /**
  * Compila todo lo cargado (ficha, medicacion con periodos, extracciones de los
- * documentos) y redacta la historia clinica.
+ * documentos) y arma la historia clinica con la estructura que usa un medico:
+ * antecedentes patologicos, medicacion habitual, enfermedad actual e impresion
+ * diagnostica.
  *
- * Es un RESUMEN PARA LLEVAR AL MEDICO, no un acto medico: el prompt prohibe
- * diagnosticar, interpretar resultados u opinar de tratamientos, el mismo
- * limite que ya rige en la conversacion y en la lectura de documentos.
+ * NO lleva "plan": indicar conducta es un acto medico y BiVi no lo es. Por el
+ * mismo motivo la impresion diagnostica no se elabora: solo se transcriben los
+ * diagnosticos que YA figuran escritos en la documentacion, con su fuente.
+ *
+ * Medicacion y estudios no los redacta el modelo: salen tal cual de la base.
  */
 
-const INSTRUCCION = `Sos un asistente que ordena información para un cuidador familiar de un adulto mayor.
-Con los datos que te paso, redactá en español una "Historia clínica resumida" en Markdown, con estas secciones (omití las que no tengan datos):
+const INSTRUCCION = `Sos un asistente que ordena documentación médica para que un cuidador familiar la lleve a la consulta.
+Con los datos que te paso, redactá en español tres secciones.
 
-## Datos de la persona
-## Medicación actual
-## Tratamientos finalizados
-## Estudios y documentos
-(ordenados del más reciente al más viejo, cada uno con fecha, qué es y qué dice)
-## Datos concretos que figuran en la documentación
-(lista de valores puntuales con su fecha)
+1. antecedentes_patologicos: lista de enfermedades, cirugías, alergias, internaciones o
+   tratamientos previos que YA figuren mencionados en la documentación o en el historial de
+   medicación. Una línea por antecedente, corta. Si un antecedente sale de un tratamiento
+   finalizado, aclarálo (ej: "Tratamiento con enalapril, finalizado en 03/2025").
+
+2. enfermedad_actual: 1 a 3 párrafos con el motivo y la situación actual según los documentos
+   más recientes: qué se está estudiando o controlando, desde cuándo, y qué muestran los
+   últimos estudios. Contá lo que dicen los documentos, sin evaluarlo.
+
+3. impresion_diagnostica: SOLO los diagnósticos que aparecen escritos textualmente en la
+   documentación, uno por línea, cada uno con la fuente entre paréntesis
+   (ej: "Hipertensión arterial (informe cardiológico del 12/03/2025)").
+   NO elabores ni deduzcas diagnósticos propios. Si en la documentación no figura ningún
+   diagnóstico, devolvé la lista vacía.
 
 Reglas estrictas:
-- Usá únicamente la información provista. No inventes, no completes huecos.
-- No diagnostiques, no interpretes valores como buenos o malos, no sugieras
-  tratamientos ni cambios de medicación. Solo ordená lo que está documentado.
-- Lenguaje claro, sin jerga innecesaria.
-- No agregues título general ni leyendas finales: eso lo pone la aplicación.`;
+- Usá únicamente la información provista. No inventes ni completes huecos.
+- No diagnostiques, no interpretes valores como buenos o malos, no sugieras tratamientos,
+  estudios ni cambios de medicación. No incluyas ninguna conducta ni plan.
+- Lenguaje claro, sin jerga innecesaria. Sin viñetas ni Markdown en el texto.
+- Si una sección no tiene respaldo en los datos, devolvé la lista vacía.
+
+Respondé únicamente con JSON válido:
+{"antecedentes_patologicos": [...], "enfermedad_actual": [...], "impresion_diagnostica": [...]}`;
+
+/** Normaliza a lista de strings limpios lo que haya devuelto el modelo. */
+function lista(valor: unknown): string[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.map((x) => String(x).trim()).filter(Boolean);
+}
 
 export async function POST() {
   if (!process.env.GEMINI_API_KEY) {
@@ -68,21 +94,29 @@ export async function POST() {
 
   const { fecha: hoy } = momentoLocal(new Date());
 
-  const lineasMedicacion = ((medicamentos ?? []) as Medicamento[]).map((m) => {
-    const horarios = m.horarios.map(formatearHora).join(', ');
-    const estado = m.activo ? describirPeriodo(m, hoy) : 'dado de baja';
-    return `- ${m.nombre}${m.dosis ? ` (${m.dosis})` : ''} · horarios: ${horarios} · ${estado}`;
+  // --- Medicacion: se arma en el servidor, no la redacta el modelo ---------
+  const medicacion: MedicacionItem[] = [];
+  const medicacionPrevia: MedicacionItem[] = [];
+
+  ((medicamentos ?? []) as Medicamento[]).forEach((m) => {
+    const partes = [
+      m.dosis || null,
+      `toma a las ${m.horarios.map(formatearHora).join(', ')}`,
+      m.activo ? describirPeriodo(m, hoy) : 'tratamiento dado de baja',
+    ].filter(Boolean) as string[];
+
+    const item: MedicacionItem = { nombre: m.nombre, detalle: partes.join(' · ') };
+    (m.activo ? medicacion : medicacionPrevia).push(item);
   });
 
-  const bloquesDocumentos = ((documentos ?? []) as Documento[]).map((d) => {
-    const datos = d.datos;
-    const valores = datos?.valores_relevantes?.length
-      ? `\n  Valores que figuran: ${datos.valores_relevantes.join('; ')}`
-      : '';
-    return `- ${datos?.titulo || d.nombre} (${datos?.tipo_documento ?? 'documento'}, fecha: ${
-      datos?.fecha_documento ?? 'sin fecha'
-    })\n  ${d.resumen}${valores}`;
-  });
+  // --- Estudios: idem, salen de la extraccion ya guardada ------------------
+  const estudios: EstudioItem[] = ((documentos ?? []) as Documento[]).map((d) => ({
+    fecha: d.datos?.fecha_documento ?? null,
+    titulo: d.datos?.titulo || d.nombre,
+    tipo: d.datos?.tipo_documento ?? 'documento',
+    resumen: d.resumen ?? '',
+    valores: d.datos?.valores_relevantes ?? [],
+  }));
 
   const contexto = `FECHA DE HOY: ${hoy}
 
@@ -90,23 +124,47 @@ PERSONA:
 - Nombre: ${elder.full_name}
 - Edad: ${elder.age} años
 
-MEDICACIÓN REGISTRADA:
-${lineasMedicacion.join('\n') || '(sin medicación cargada)'}
+MEDICACIÓN EN CURSO:
+${medicacion.map((m) => `- ${m.nombre} · ${m.detalle}`).join('\n') || '(sin medicación cargada)'}
 
-DOCUMENTOS SUBIDOS (resúmenes ya extraídos):
-${bloquesDocumentos.join('\n') || '(sin documentos)'}`;
+TRATAMIENTOS FINALIZADOS O DADOS DE BAJA:
+${medicacionPrevia.map((m) => `- ${m.nombre} · ${m.detalle}`).join('\n') || '(ninguno)'}
+
+DOCUMENTOS SUBIDOS (resúmenes ya extraídos, del más reciente al más viejo):
+${
+  estudios
+    .map(
+      (e) =>
+        `- ${e.titulo} (${e.tipo}, fecha: ${e.fecha ?? 'sin fecha'})\n  ${e.resumen}${
+          e.valores.length ? `\n  Valores que figuran: ${e.valores.join('; ')}` : ''
+        }`
+    )
+    .join('\n') || '(sin documentos)'
+}`;
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       systemInstruction: INSTRUCCION,
+      generationConfig: { responseMimeType: 'application/json' },
     });
 
     const respuesta = await model.generateContent(contexto);
-    const historia = respuesta.response.text();
+    const crudo = JSON.parse(respuesta.response.text()) as Partial<SeccionesRedactadas>;
 
-    return NextResponse.json({ historia, generadaEl: hoy });
+    const historia: Historia = {
+      paciente: { nombre: elder.full_name as string, edad: elder.age as number },
+      generadaEl: hoy,
+      antecedentes: lista(crudo.antecedentes_patologicos),
+      medicacion,
+      medicacionPrevia,
+      enfermedadActual: lista(crudo.enfermedad_actual),
+      impresionDiagnostica: lista(crudo.impresion_diagnostica),
+      estudios,
+    };
+
+    return NextResponse.json({ historia });
   } catch (error) {
     console.error('Error generando historia:', error);
 

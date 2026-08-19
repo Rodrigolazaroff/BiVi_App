@@ -1,72 +1,22 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
+import VisorHistoria from './VisorHistoria';
+import { formatearFecha, type Historia } from '@/lib/historia';
 
 /**
- * Genera la historia clinica resumida y la muestra lista para imprimir.
+ * Genera la historia clinica y ofrece verla en el visor flotante.
  *
- * La redaccion llega en Markdown acotado (##, -, **) y se renderiza con un
- * parser minimo propio: sumar una dependencia entera para cuatro construcciones
- * no se justifica.
+ * La tarjeta de la pagina solo resume que quedo armado; el documento completo
+ * vive en <VisorHistoria>, que es tambien lo que se imprime.
  */
 
-function negritas(texto: string, keyBase: string): ReactNode[] {
-  return texto.split(/\*\*(.+?)\*\*/g).map((parte, i) =>
-    i % 2 === 1 ? <strong key={`${keyBase}-${i}`}>{parte}</strong> : parte
-  );
-}
-
-function renderizarMarkdown(md: string): ReactNode[] {
-  const bloques: ReactNode[] = [];
-  let listaActual: string[] = [];
-
-  const cerrarLista = (key: string) => {
-    if (listaActual.length === 0) return;
-    const items = listaActual;
-    listaActual = [];
-    bloques.push(
-      <ul key={key} className="mb-4 list-disc space-y-1.5 pl-5">
-        {items.map((item, i) => (
-          <li key={i}>{negritas(item, `${key}-${i}`)}</li>
-        ))}
-      </ul>
-    );
-  };
-
-  md.split('\n').forEach((linea, n) => {
-    const limpia = linea.trim();
-
-    // Gemini alterna entre "- " y "* " como vinieta segun el dia.
-    if (limpia.startsWith('- ') || limpia.startsWith('* ')) {
-      listaActual.push(limpia.slice(2));
-      return;
-    }
-    cerrarLista(`ul-${n}`);
-
-    if (limpia.startsWith('##')) {
-      bloques.push(
-        <h3 key={n} className="mt-6 mb-2 font-display text-xl font-semibold text-bivi-text first:mt-0">
-          {limpia.replace(/^#+\s*/, '')}
-        </h3>
-      );
-    } else if (limpia) {
-      bloques.push(
-        <p key={n} className="mb-3">
-          {negritas(limpia, `p-${n}`)}
-        </p>
-      );
-    }
-  });
-  cerrarLista('ul-final');
-
-  return bloques;
-}
-
 export default function HistoriaClinica() {
-  const [historia, setHistoria] = useState('');
-  const [generada, setGenerada] = useState('');
+  const [historia, setHistoria] = useState<Historia | null>(null);
+  const [viendo, setViendo] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const botonVer = useRef<HTMLButtonElement>(null);
 
   async function generar() {
     setError('');
@@ -78,8 +28,8 @@ export default function HistoriaClinica() {
         setError(body.error || 'No pudimos generar la historia clínica.');
         return;
       }
-      setHistoria(body.historia);
-      setGenerada(body.generadaEl);
+      setHistoria(body.historia as Historia);
+      setViendo(true);
     } finally {
       setCargando(false);
     }
@@ -96,7 +46,7 @@ export default function HistoriaClinica() {
       <button
         onClick={generar}
         disabled={cargando}
-        className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white shadow-sm transition hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
+        className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white shadow-sm transition-transform duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
       >
         {cargando
           ? 'Armando el resumen...'
@@ -114,33 +64,32 @@ export default function HistoriaClinica() {
       </div>
 
       {historia && (
-        <>
-          <article
-            id="zona-impresion"
-            className="mt-6 rounded-xl border border-bivi-border/70 bg-bivi-bg/50 p-5 text-bivi-text sm:p-6 print:border-0 print:bg-white print:p-0"
-          >
-            <h2 className="mb-1 font-display text-2xl font-semibold">
-              Historia clínica resumida
-            </h2>
-            <p className="mb-5 text-sm text-bivi-muted">
-              Generada el {generada.split('-').reverse().map(Number).join('/')} con BiVi.
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-bivi-border/70 bg-bivi-bg/60 px-4 py-3.5">
+          <div className="min-w-0">
+            <p className="font-bold text-bivi-text">{historia.paciente.nombre}</p>
+            <p className="text-sm text-bivi-muted">
+              Generada el {formatearFecha(historia.generadaEl)} ·{' '}
+              {historia.medicacion.length} en medicación · {historia.estudios.length} estudios
             </p>
-
-            {renderizarMarkdown(historia)}
-
-            <p className="mt-6 border-t border-bivi-border/70 pt-4 text-sm text-bivi-muted">
-              Este resumen solo ordena la información cargada por el cuidador. No es un
-              documento médico ni reemplaza la consulta profesional.
-            </p>
-          </article>
-
+          </div>
           <button
-            onClick={() => window.print()}
-            className="mt-4 w-full rounded-xl border border-bivi-border px-4 py-3 font-bold text-bivi-text transition hover:bg-bivi-bg"
+            ref={botonVer}
+            onClick={() => setViendo(true)}
+            className="rounded-xl bg-bivi-blue px-6 py-2.5 font-bold text-white shadow-sm transition-transform duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.97]"
           >
-            Imprimir o guardar como PDF
+            Ver
           </button>
-        </>
+        </div>
+      )}
+
+      {historia && viendo && (
+        <VisorHistoria
+          historia={historia}
+          onCerrar={() => {
+            setViendo(false);
+            botonVer.current?.focus();
+          }}
+        />
       )}
     </section>
   );

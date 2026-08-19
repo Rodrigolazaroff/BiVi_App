@@ -80,20 +80,33 @@ textarea {
 }
 
 /*
- * Al imprimir, solo la historia clinica: el truco de visibility (y no display)
- * mantiene el arbol renderizado, asi el contenido anidado puede volver a verse.
+ * Al imprimir sale SOLO la historia clinica, y sale igual que en pantalla:
+ * es el mismo componente, sin maqueta paralela.
+ *
+ * El visor se monta en un portal como hijo directo de <body>. Con :has() se
+ * apaga todo lo demas solo cuando el visor esta abierto; si esta cerrado, la
+ * pagina se imprime normal en vez de salir en blanco.
+ *
+ * No se usa el viejo truco de visibility + position:absolute: el documento
+ * ahora vive dentro de un panel posicionado, y sacarlo del flujo hacia colapsar
+ * al contenedor y recortaba la impresion en la primera pagina.
  */
 @media print {
+  @page {
+    margin: 16mm;
+  }
+
   body {
-    visibility: hidden;
+    background: #fff;
   }
-  #zona-impresion,
-  #zona-impresion * {
-    visibility: visible;
+
+  body:has(#visor-historia) > *:not(#visor-historia) {
+    display: none !important;
   }
+
   #zona-impresion {
-    position: absolute;
-    inset: 0;
-    margin: 0;
+    /* Los puntos de vineta y los chips de valores son fondos de color. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

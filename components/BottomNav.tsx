@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -15,6 +15,10 @@ import type { ReactNode } from 'react';
  * destaca: se vuelve ahi todo el tiempo, y en una barra de cinco el centro es
  * lo que el pulgar encuentra sin mirar. El disco no sobresale de la barra a
  * proposito, asi las cinco celdas miden lo mismo y ninguna etiqueta se corta.
+ *
+ * Al tocar, la pestania se pinta en el acto con `useLinkStatus` en vez de
+ * esperar al servidor. Si la ruta ya venia precargada el estado pendiente ni
+ * aparece, que es lo esperable: ahi la navegacion ya fue instantanea.
  */
 
 interface Tab {
@@ -66,6 +70,73 @@ const DERECHA: Tab[] = [
   },
 ];
 
+/**
+ * Barra fina arriba de la celda mientras la navegacion esta en curso.
+ *
+ * Siempre montada y de alto fijo: si apareciera y desapareciera del flujo,
+ * cada toque correria la barra entera un pixel.
+ */
+function Pendiente() {
+  const { pending } = useLinkStatus();
+
+  return (
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute inset-x-4 top-0 h-0.5 rounded-full bg-bivi-blue transition-opacity duration-150 ease-out ${
+        pending ? 'opacity-100' : 'opacity-0'
+      }`}
+    />
+  );
+}
+
+/** Pinta la pestania como activa apenas se toca, sin esperar al servidor. */
+function Etiqueta({
+  activa,
+  label,
+  children,
+}: {
+  activa: boolean;
+  label: string;
+  children: ReactNode;
+}) {
+  const { pending } = useLinkStatus();
+  const resaltada = activa || pending;
+
+  return (
+    <span
+      className={`flex flex-col items-center gap-1 transition-colors duration-150 ease-out ${
+        resaltada ? 'text-bivi-blue' : 'text-bivi-muted'
+      }`}
+    >
+      <Icono activa={resaltada}>{children}</Icono>
+      <span className={`text-xs ${resaltada ? 'font-bold' : 'font-medium'}`}>{label}</span>
+    </span>
+  );
+}
+
+/** Igual que Etiqueta, pero para el disco central de Inicio. */
+function EtiquetaInicio({ activa }: { activa: boolean }) {
+  const { pending } = useLinkStatus();
+  const resaltada = activa || pending;
+
+  return (
+    <span className="flex flex-col items-center gap-1">
+      <span
+        className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-150 ease-out ${
+          resaltada ? 'bg-bivi-blue text-white' : 'bg-bivi-blue-soft text-bivi-blue'
+        }`}
+      >
+        <Icono activa={resaltada}>
+          <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />
+        </Icono>
+      </span>
+      <span className={`text-xs font-bold ${resaltada ? 'text-bivi-blue' : 'text-bivi-muted'}`}>
+        Inicio
+      </span>
+    </span>
+  );
+}
+
 function Icono({ activa, children }: { activa: boolean; children: ReactNode }) {
   return (
     <svg
@@ -90,22 +161,6 @@ export default function BottomNav() {
     // /dashboard matchea exacto; el resto tambien cubre subrutas.
     href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
 
-  const Pestania = ({ tab }: { tab: Tab }) => {
-    const activa = esActiva(tab.href);
-    return (
-      <Link
-        href={tab.href}
-        aria-current={activa ? 'page' : undefined}
-        className={`flex min-h-[4.5rem] flex-col items-center justify-center gap-1 pt-2 pb-1.5 transition-colors ${
-          activa ? 'text-bivi-blue' : 'text-bivi-muted hover:text-bivi-text'
-        }`}
-      >
-        <Icono activa={activa}>{tab.icono}</Icono>
-        <span className={`text-xs ${activa ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
-      </Link>
-    );
-  };
-
   const inicioActiva = esActiva('/dashboard');
 
   return (
@@ -116,34 +171,37 @@ export default function BottomNav() {
     >
       <div className="mx-auto grid max-w-xl grid-cols-5">
         {IZQUIERDA.map((tab) => (
-          <Pestania key={tab.href} tab={tab} />
+          <Pestania key={tab.href} tab={tab} activa={esActiva(tab.href)} />
         ))}
 
         <Link
           href="/dashboard"
           aria-current={inicioActiva ? 'page' : undefined}
-          className="flex min-h-[4.5rem] flex-col items-center justify-center gap-1 pt-2 pb-1.5"
+          className="relative flex min-h-[4.5rem] flex-col items-center justify-center pt-2 pb-1.5"
         >
-          <span
-            className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
-              inicioActiva ? 'bg-bivi-blue text-white' : 'bg-bivi-blue-soft text-bivi-blue'
-            }`}
-          >
-            <Icono activa={inicioActiva}>
-              <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />
-            </Icono>
-          </span>
-          <span
-            className={`text-xs font-bold ${inicioActiva ? 'text-bivi-blue' : 'text-bivi-muted'}`}
-          >
-            Inicio
-          </span>
+          <Pendiente />
+          <EtiquetaInicio activa={inicioActiva} />
         </Link>
 
         {DERECHA.map((tab) => (
-          <Pestania key={tab.href} tab={tab} />
+          <Pestania key={tab.href} tab={tab} activa={esActiva(tab.href)} />
         ))}
       </div>
     </nav>
+  );
+}
+
+function Pestania({ tab, activa }: { tab: Tab; activa: boolean }) {
+  return (
+    <Link
+      href={tab.href}
+      aria-current={activa ? 'page' : undefined}
+      className="relative flex min-h-[4.5rem] flex-col items-center justify-center pt-2 pb-1.5"
+    >
+      <Pendiente />
+      <Etiqueta activa={activa} label={tab.label}>
+        {tab.icono}
+      </Etiqueta>
+    </Link>
   );
 }

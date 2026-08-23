@@ -9,26 +9,26 @@ import { resumirUso, type SesionResumen } from '@/lib/uso';
  */
 export default async function InicioPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const meta = user?.user_metadata ?? {};
+  // Las tres en paralelo: encadenadas eran tres viajes a Supabase antes de
+  // pintar nada. Las sesiones ya no se condicionan a que exista el elder
+  // porque las policies las acotan igual: sin elder la consulta vuelve vacia.
+  const [{ data: userData }, { data: elder }, { data: sesiones }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('elders').select('id, full_name').maybeSingle(),
+    supabase
+      .from('sessions')
+      .select('started_at, duration_seconds, status')
+      .order('started_at', { ascending: false })
+      // El acumulado es de siempre, no de la ultima semana. El tope existe
+      // para que la consulta no crezca sin limite: a tres charlas por dia
+      // son mas de tres anios de uso.
+      .limit(1000),
+  ]);
+
+  const meta = userData.user?.user_metadata ?? {};
   const firstName: string =
     meta.first_name || String(meta.full_name ?? meta.name ?? '').split(' ')[0] || '';
-
-  const { data: elder } = await supabase.from('elders').select('id, full_name').maybeSingle();
-
-  const { data: sesiones } = elder
-    ? await supabase
-        .from('sessions')
-        .select('started_at, duration_seconds, status')
-        .order('started_at', { ascending: false })
-        // El acumulado es de siempre, no de la ultima semana. El tope existe
-        // para que la consulta no crezca sin limite: a tres charlas por dia
-        // son mas de tres anios de uso.
-        .limit(1000)
-    : { data: null };
 
   // Sellar el reloj aca mantiene puros a los componentes que lo reciben.
   // eslint-disable-next-line react-hooks/purity

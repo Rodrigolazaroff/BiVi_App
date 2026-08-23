@@ -4,12 +4,14 @@ import CerrarSesion from './client';
 
 export default async function CuentaPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const { data: elder } = await supabase.from('elders').select('full_name').maybeSingle();
+  // Las dos en paralelo: no dependen entre si.
+  const [{ data: userData }, { data: elder }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('elders').select('full_name').maybeSingle(),
+  ]);
 
+  const user = userData.user;
   const meta = user?.user_metadata ?? {};
   const nombre = [meta.first_name, meta.last_name].filter(Boolean).join(' ') || meta.full_name;
 

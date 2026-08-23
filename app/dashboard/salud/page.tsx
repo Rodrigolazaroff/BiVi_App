@@ -13,24 +13,24 @@ import type { Documento } from '@/lib/documentos';
 export default async function SaludPage() {
   const supabase = await createClient();
 
-  const { data: elder } = await supabase.from('elders').select('id, full_name').maybeSingle();
-
-  const [{ data: medicamentos }, { data: documentos }] = elder
-    ? await Promise.all([
-        supabase
-          .from('medications')
-          // Todos, tambien los dados de baja: el historial vive en la misma
-          // seccion, plegado debajo de los que estan en curso.
-          .select('id, nombre, dosis, horarios, activo, desde, hasta')
-          .order('created_at'),
-        supabase
-          .from('documents')
-          .select(
-            'id, nombre, storage_path, mime_type, tamano, resumen, datos, procesado_en, created_at'
-          )
-          .order('created_at', { ascending: false }),
-      ])
-    : [{ data: null }, { data: null }];
+  // En paralelo: buscar el elder primero y recien despues lo suyo eran dos
+  // viajes encadenados. Las policies acotan medicamentos y documentos al
+  // elder del cuidador, asi que sin ficha cargada vuelven vacios.
+  const [{ data: elder }, { data: medicamentos }, { data: documentos }] = await Promise.all([
+    supabase.from('elders').select('id, full_name').maybeSingle(),
+    supabase
+      // Todos, tambien los dados de baja: el historial vive en la misma
+      // seccion, plegado debajo de los que estan en curso.
+      .from('medications')
+      .select('id, nombre, dosis, horarios, activo, desde, hasta')
+      .order('created_at'),
+    supabase
+      .from('documents')
+      .select(
+        'id, nombre, storage_path, mime_type, tamano, resumen, datos, procesado_en, created_at'
+      )
+      .order('created_at', { ascending: false }),
+  ]);
 
   // eslint-disable-next-line react-hooks/purity
   const ahora = Date.now();

@@ -16,8 +16,43 @@
   --color-bivi-muted: #5a7a8a;
   --color-bivi-border: #d9e6f0;
 
+  /*
+    Estados semanticos. Estaban sueltos como red-50/red-800 y amber-50/
+    amber-900 repetidos en seis archivos: como tokens se definen una sola vez
+    y quedan desaturados, a tono con el resto de la paleta en vez de gritar.
+    Contraste verificado sobre su propio fondo: 6.3:1 y 6.7:1.
+  */
+  --color-bivi-alerta: #9f2f2d;
+  --color-bivi-alerta-dark: #7f2523;
+  --color-bivi-alerta-soft: #fdebec;
+  --color-bivi-aviso: #7c4a03;
+  --color-bivi-aviso-soft: #fbf3db;
+
+  /*
+    Una sola elevacion para todas las tarjetas, tenida de azul como el fondo.
+    Antes cada seccion llevaba shadow-xl: con todo elevado por igual, la
+    sombra dejaba de comunicar jerarquia y solo agregaba peso. Ahora la
+    tarjeta se separa del fondo por el borde, y la sombra apenas la despega.
+  */
+  --shadow-card: 0 1px 2px rgba(27, 117, 188, 0.04), 0 8px 24px -14px rgba(27, 117, 188, 0.14);
+  --shadow-lift: 0 2px 6px rgba(27, 117, 188, 0.06), 0 20px 40px -20px rgba(27, 117, 188, 0.22);
+
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-atkinson), system-ui, sans-serif;
+}
+
+/*
+  Titulos: el navegador reparte las lineas para que no quede una palabra
+  huerfana al final. En castellano, con palabras largas, se nota.
+*/
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 body {

@@ -120,7 +120,7 @@ export default function Notificaciones() {
   if (estado === 'cargando') return null;
 
   return (
-    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
       <h2 className="font-display text-2xl font-semibold text-bivi-text">
         Recordatorios en el celular
       </h2>
@@ -137,7 +137,7 @@ export default function Notificaciones() {
       )}
 
       {estado === 'bloqueado' && (
-        <p className="rounded-xl bg-amber-50 px-4 py-4 text-amber-900">
+        <p className="rounded-xl bg-bivi-aviso-soft px-4 py-4 text-bivi-aviso">
           Las notificaciones están bloqueadas para BiVi. Buscá el candado en la barra de
           direcciones y permitilas para poder activar los recordatorios.
         </p>
@@ -147,7 +147,7 @@ export default function Notificaciones() {
         <button
           onClick={activar}
           disabled={estado === 'trabajando'}
-          className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white shadow-sm transition hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
+          className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white transition hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
         >
           {estado === 'trabajando' ? 'Un momento...' : 'Activar recordatorios acá'}
         </button>
@@ -155,8 +155,20 @@ export default function Notificaciones() {
 
       {estado === 'activo' && (
         <div className="space-y-3">
-          <p className="rounded-xl bg-bivi-green-soft px-4 py-3 font-bold text-bivi-green-dark">
-            ✓ Este dispositivo recibe los recordatorios.
+          <p className="flex items-center gap-2.5 rounded-xl bg-bivi-green-soft px-4 py-3 font-bold text-bivi-green-dark">
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m4 12.5 5 5L20 7" />
+            </svg>
+            Este dispositivo recibe los recordatorios.
           </p>
           <button
             onClick={desactivar}
@@ -169,7 +181,7 @@ export default function Notificaciones() {
 
       <div aria-live="polite">
         {error && (
-          <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+          <p className="mt-3 rounded-xl bg-bivi-alerta-soft px-4 py-3 text-sm font-bold text-bivi-alerta">
             {error}
           </p>
         )}

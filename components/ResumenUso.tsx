@@ -16,7 +16,7 @@ export default function ResumenUso({
   const primerNombre = nombre.split(' ')[0] || nombre;
 
   return (
-    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
       <h2 className="font-display text-2xl font-semibold text-bivi-text">Cómo viene la semana</h2>
       <p className="mt-1 mb-6 text-bivi-muted">
         Se registra cuándo y cuánto conversaron. Lo que hablan es privado y no se guarda.
@@ -71,7 +71,7 @@ export default function ResumenUso({
 function Dato({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
     <div className="rounded-xl bg-bivi-blue-soft/60 px-3 py-4 text-center">
-      <p className="font-display text-xl font-semibold text-bivi-blue">{valor}</p>
+      <p className="font-display text-xl font-semibold text-bivi-blue tabular-nums">{valor}</p>
       <p className="mt-1 text-xs leading-tight text-bivi-muted">{etiqueta}</p>
     </div>
   );

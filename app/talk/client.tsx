@@ -253,37 +253,46 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
     }
   };
 
+  /*
+   * Cada estado tiene su color, pero el color NO es lo que lo comunica: el
+   * texto de abajo (aria-live) lo dice con todas las letras. Para alguien que
+   * no distingue bien los tonos, la pantalla sigue siendo legible.
+   */
+  const estilosDelBoton: Record<State, string> = {
+    idle: 'bg-bivi-blue text-white hover:bg-bivi-blue-dark active:scale-[0.97] cursor-pointer',
+    listening: 'bg-bivi-green text-white animate-pulse',
+    thinking: 'border-4 border-bivi-blue bg-white text-bivi-blue',
+    speaking: 'bg-bivi-blue-dark text-white',
+  };
+
   return (
-    <main className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+    <main className="fixed inset-0 flex flex-col items-center justify-center bg-bivi-bg p-4">
       <button
         onClick={() => router.push('/dashboard')}
-        className="fixed top-4 left-4 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition"
+        className="fixed top-4 left-4 rounded-xl border border-bivi-border bg-white px-4 py-2.5 font-bold text-bivi-text transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-blue-soft active:scale-[0.97]"
       >
         ← Volver
       </button>
 
-      <div className="flex flex-col items-center justify-center flex-1 w-full">
+      <div className="flex w-full flex-1 flex-col items-center justify-center">
         <button
           onClick={state === 'idle' ? startSession : undefined}
           disabled={state !== 'idle' || !soportado}
           aria-label={state === 'idle' ? 'Empezar a conversar con BiVi' : getStatusText()}
-          className={`w-64 h-64 rounded-full flex items-center justify-center text-white font-bold text-2xl transition-all disabled:opacity-60 ${
-            state === 'idle'
-              ? 'bg-blue-600 hover:bg-blue-700 active:scale-95 cursor-pointer'
-              : state === 'listening'
-                ? 'bg-green-500 animate-pulse'
-                : state === 'thinking'
-                  ? 'bg-yellow-500'
-                  : 'bg-indigo-600'
-          }`}
+          className={`flex h-64 w-64 items-center justify-center rounded-full shadow-lift transition-transform duration-200 ease-out ${
+            estilosDelBoton[state]
+          } ${soportado ? '' : 'opacity-50'}`}
         >
-          <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="h-24 w-24" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
             <path d="M17 16.91c-1.48.88-3.18 1.4-5 1.4s-3.52-.52-5-1.41V20c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-3.09z" />
           </svg>
         </button>
 
-        <p className="mt-6 text-lg font-semibold text-blue-900" aria-live="polite">
+        <p
+          className="mt-8 font-display text-2xl font-semibold tracking-tight text-bivi-text"
+          aria-live="polite"
+        >
           {getStatusText()}
         </p>
       </div>
@@ -293,7 +302,7 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
           /* Envuelto a proposito: pasar endSession directo le mandaria el
              evento del click como si fuera el estado de cierre. */
           onClick={() => endSession()}
-          className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-full font-semibold text-lg transition"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-xl bg-bivi-alerta px-8 py-3.5 text-lg font-bold text-white transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-alerta-dark active:scale-[0.97]"
         >
           Terminar
         </button>
@@ -302,7 +311,7 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
       {(error || errorDeSoporte) && (
         <div
           role="alert"
-          className="fixed top-16 left-4 right-4 bg-red-100 text-red-900 p-4 rounded-lg flex items-start gap-3"
+          className="fixed top-16 right-4 left-4 flex items-start gap-3 rounded-xl bg-bivi-alerta-soft p-4 font-bold text-bivi-alerta"
         >
           <span className="flex-1">{error || errorDeSoporte}</span>
           {/* El error de soporte no se puede cerrar: es una condicion del
@@ -311,7 +320,7 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
             <button
               onClick={() => setError('')}
               aria-label="Cerrar el aviso"
-              className="text-red-700 font-bold text-xl leading-none shrink-0"
+              className="shrink-0 text-xl leading-none"
             >
               ×
             </button>
@@ -320,12 +329,12 @@ export default function TalkClient({ elder }: { elder: ElderProfile }) {
       )}
 
       {aviso && !error && !errorDeSoporte && (
-        <div className="fixed top-16 left-4 right-4 bg-amber-50 text-amber-900 p-4 rounded-lg flex items-start gap-3">
+        <div className="fixed top-16 right-4 left-4 flex items-start gap-3 rounded-xl bg-bivi-aviso-soft p-4 text-bivi-aviso">
           <span className="flex-1">{aviso}</span>
           <button
             onClick={() => setAviso('')}
             aria-label="Cerrar el aviso"
-            className="text-amber-700 font-bold text-xl leading-none shrink-0"
+            className="shrink-0 text-xl leading-none font-bold"
           >
             ×
           </button>

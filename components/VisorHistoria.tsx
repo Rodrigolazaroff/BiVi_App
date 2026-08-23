@@ -98,7 +98,7 @@ export default function VisorHistoria({
           aria-label={`Historia clínica de ${historia.paciente.nombre}`}
           className={[
             'relative flex w-full flex-col bg-white outline-none',
-            'sm:max-h-full sm:max-w-3xl sm:rounded-2xl sm:shadow-2xl sm:shadow-bivi-text/20',
+            'sm:max-h-full sm:max-w-3xl sm:rounded-2xl sm:shadow-lift',
             'transition-[opacity,translate] ease-[cubic-bezier(0.23,1,0.32,1)]',
             visible
               ? 'translate-y-0 opacity-100 duration-[260ms]'
@@ -111,7 +111,7 @@ export default function VisorHistoria({
             <button
               onClick={cerrar}
               aria-label="Cerrar y volver"
-              className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-bivi-muted transition-transform duration-150 ease-out hover:bg-bivi-bg hover:text-bivi-text active:scale-[0.94]"
+              className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-bivi-muted transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-bg hover:text-bivi-text active:scale-[0.94]"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
@@ -126,13 +126,13 @@ export default function VisorHistoria({
           <footer className="flex shrink-0 gap-3 border-t border-bivi-border/70 px-4 py-3 sm:px-6 print:hidden">
             <button
               onClick={cerrar}
-              className="flex-1 rounded-xl border border-bivi-border px-4 py-3 font-bold text-bivi-text transition-transform duration-150 ease-out hover:bg-bivi-bg active:scale-[0.98]"
+              className="flex-1 rounded-xl border border-bivi-border px-4 py-3 font-bold text-bivi-text transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-bg active:scale-[0.98]"
             >
               Volver
             </button>
             <button
               onClick={() => window.print()}
-              className="flex-1 rounded-xl bg-bivi-blue px-4 py-3 font-bold text-white shadow-sm transition-transform duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.98]"
+              className="flex-1 rounded-xl bg-bivi-blue px-4 py-3 font-bold text-white transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.98]"
             >
               Guardar PDF
             </button>

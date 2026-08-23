@@ -23,7 +23,7 @@ export default async function CuentaPage() {
       </header>
 
       <div className="space-y-6">
-        <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+        <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
           <h2 className="font-display text-2xl font-semibold text-bivi-text">Tus datos</h2>
           <dl className="mt-4 space-y-3">
             {nombre && (

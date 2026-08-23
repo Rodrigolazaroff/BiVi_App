@@ -95,14 +95,14 @@ export default function FichaForm() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-bivi-border/70 bg-white p-8 shadow-sm">
+      <div className="rounded-2xl border border-bivi-border/70 bg-white p-8 shadow-card">
         <p className="text-bivi-muted">Cargando la ficha...</p>
       </div>
     );
   }
 
   return (
-    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
       <h2 className="font-display text-2xl font-semibold text-bivi-text">
         Ficha del adulto mayor
       </h2>
@@ -174,7 +174,7 @@ export default function FichaForm() {
 
         <div aria-live="polite">
           {error && (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+            <p className="rounded-xl bg-bivi-alerta-soft px-4 py-3 text-sm font-bold text-bivi-alerta">
               {error}
             </p>
           )}
@@ -188,7 +188,7 @@ export default function FichaForm() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white shadow-sm transition hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
+          className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white transition hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>

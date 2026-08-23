@@ -67,32 +67,48 @@ export default function InstallButton({ elderName: nombre }: { elderName?: strin
 
   if (installed) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <h2 className="text-2xl font-bold text-green-900 mb-4">✓ BiVi instalada</h2>
-        <p className="text-gray-700">
-          BiVi ya está instalada en este celular. Buscá el ícono en la pantalla de inicio y tocalo para que {elderName} pueda conversar.
+      <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
+        <h2 className="font-display text-2xl font-semibold text-bivi-text">BiVi instalada</h2>
+        <p className="mt-1 text-bivi-muted">
+          Ya está en este celular. Buscá el ícono en la pantalla de inicio y tocalo para que{' '}
+          {elderName} pueda conversar.
         </p>
-      </div>
+      </section>
     );
   }
 
   if (isIOS) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <h2 className="text-2xl font-bold text-blue-900 mb-4">Instalar BiVi (iPhone/iPad)</h2>
-        <div className="text-gray-700 space-y-3">
-          <p className="font-semibold">Seguí estos pasos:</p>
-          <ol className="list-decimal list-inside space-y-2 ml-2">
-            <li>Tocá el botón <span className="font-semibold">Compartir</span> (ícono de flecha hacia arriba)</li>
-            <li>Buscá <span className="font-semibold">Agregar a pantalla de inicio</span></li>
-            <li>Tocá <span className="font-semibold">Agregar</span></li>
-            <li>BiVi aparecerá como un ícono en la pantalla de inicio</li>
-          </ol>
-          <p className="text-sm text-gray-600 mt-4">
-            Hacé esto desde el celular de {elderName} para que pueda usar BiVi fácilmente.
-          </p>
-        </div>
-      </div>
+      <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
+        <h2 className="font-display text-2xl font-semibold text-bivi-text">
+          Instalar BiVi en iPhone o iPad
+        </h2>
+        <p className="mt-1 mb-5 text-bivi-muted">
+          Hacé esto desde el celular de {elderName}, para que le quede a mano.
+        </p>
+
+        <ol className="space-y-3">
+          {[
+            <>
+              Tocá el botón <strong>Compartir</strong>, el de la flecha hacia arriba.
+            </>,
+            <>
+              Buscá <strong>Agregar a pantalla de inicio</strong>.
+            </>,
+            <>
+              Tocá <strong>Agregar</strong>.
+            </>,
+            <>BiVi aparece como un ícono más en la pantalla.</>,
+          ].map((paso, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bivi-blue-soft text-sm font-bold text-bivi-blue tabular-nums">
+                {i + 1}
+              </span>
+              <span className="pt-0.5 text-bivi-text">{paso}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
     );
   }
 
@@ -101,17 +117,20 @@ export default function InstallButton({ elderName: nombre }: { elderName?: strin
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
-      <h2 className="text-2xl font-bold text-blue-900 mb-4">Instalar BiVi en este celular</h2>
-      <p className="text-gray-700 mb-6">
-        Abrí esta página desde el celular de {elderName} y tocá el botón para instalar BiVi. Una vez instalada, BiVi va a aparecer como un ícono en la pantalla del celular.
+    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
+      <h2 className="font-display text-2xl font-semibold text-bivi-text">
+        Instalar BiVi en este celular
+      </h2>
+      <p className="mt-1 mb-5 text-bivi-muted">
+        Abrí esta página desde el celular de {elderName} y tocá el botón. BiVi queda como un
+        ícono en la pantalla, igual que cualquier otra app.
       </p>
       <button
         onClick={handleInstall}
-        className="w-full bg-green-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-green-700 transition"
+        className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.99]"
       >
-        INSTALAR EN ESTE CELULAR
+        Instalar en este celular
       </button>
-    </div>
+    </section>
   );
 }

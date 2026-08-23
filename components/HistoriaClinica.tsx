@@ -36,7 +36,7 @@ export default function HistoriaClinica() {
   }
 
   return (
-    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
       <h2 className="font-display text-2xl font-semibold text-bivi-text">Historia clínica</h2>
       <p className="mt-1 mb-5 text-bivi-muted">
         Junta la ficha, la medicación y los documentos subidos en un resumen ordenado para
@@ -46,7 +46,7 @@ export default function HistoriaClinica() {
       <button
         onClick={generar}
         disabled={cargando}
-        className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white shadow-sm transition-transform duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
+        className="w-full rounded-xl bg-bivi-blue px-4 py-3.5 font-bold text-white transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.99] disabled:opacity-60"
       >
         {cargando
           ? 'Armando el resumen...'
@@ -57,7 +57,7 @@ export default function HistoriaClinica() {
 
       <div aria-live="polite">
         {error && (
-          <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+          <p className="mt-3 rounded-xl bg-bivi-alerta-soft px-4 py-3 text-sm font-bold text-bivi-alerta">
             {error}
           </p>
         )}
@@ -75,7 +75,7 @@ export default function HistoriaClinica() {
           <button
             ref={botonVer}
             onClick={() => setViendo(true)}
-            className="rounded-xl bg-bivi-blue px-6 py-2.5 font-bold text-white shadow-sm transition-transform duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.97]"
+            className="rounded-xl bg-bivi-blue px-6 py-2.5 font-bold text-white transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-blue-dark active:scale-[0.97]"
           >
             Ver
           </button>

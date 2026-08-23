@@ -46,7 +46,7 @@ export default async function InicioPage() {
           <>
             <Link
               href="/talk"
-              className="block w-full rounded-2xl bg-bivi-green px-4 py-5 text-center font-display text-2xl font-semibold text-white shadow-lg shadow-bivi-green/20 transition hover:bg-bivi-green-dark active:scale-[0.99]"
+              className="block w-full rounded-2xl bg-bivi-green px-4 py-5 text-center font-display text-2xl font-semibold text-white transition-[background-color,transform] duration-150 ease-out hover:bg-bivi-green-dark active:scale-[0.99]"
             >
               ¿Conversamos?
             </Link>
@@ -54,7 +54,7 @@ export default async function InicioPage() {
             <ResumenUso resumen={resumen} nombre={elder.full_name as string} ahora={ahora} />
           </>
         ) : (
-          <section className="rounded-2xl border border-bivi-border/70 bg-white p-8 text-center shadow-xl shadow-bivi-blue/5">
+          <section className="rounded-2xl border border-bivi-border/70 bg-white p-8 text-center shadow-card">
             <h2 className="font-display text-2xl font-semibold text-bivi-text">
               Empecemos por la ficha
             </h2>
@@ -64,7 +64,7 @@ export default async function InicioPage() {
             </p>
             <Link
               href="/dashboard/ficha"
-              className="inline-block rounded-xl bg-bivi-blue px-6 py-3.5 font-bold text-white shadow-sm transition hover:bg-bivi-blue-dark active:scale-[0.99]"
+              className="inline-block rounded-xl bg-bivi-blue px-6 py-3.5 font-bold text-white transition hover:bg-bivi-blue-dark active:scale-[0.99]"
             >
               Completar la ficha
             </Link>

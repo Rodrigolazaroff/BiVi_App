@@ -9,7 +9,7 @@ import BottomNav from '@/components/BottomNav';
  */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-bivi-blue-soft via-bivi-bg to-bivi-green-soft/40 px-4 pt-10 pb-28">
+    <main className="min-h-dvh bg-bivi-bg px-4 pt-10 pb-28">
       <div className="mx-auto max-w-xl">{children}</div>
       <BottomNav />
     </main>

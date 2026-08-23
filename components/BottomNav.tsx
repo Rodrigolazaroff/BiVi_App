@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 /**
  * Navegacion inferior del panel, estilo app instalada.
@@ -9,16 +10,20 @@ import { usePathname } from 'next/navigation';
  * Siempre icono + texto: un icono solo obliga a adivinar, y el publico de BiVi
  * (cuidadores, muchos tambien mayores) no tiene por que conocer la convencion.
  * Los targets son altos (64px+) por el mismo motivo.
+ *
+ * Inicio va al centro, con el icono sobre un disco lleno. Es el unico que se
+ * destaca: se vuelve ahi todo el tiempo, y en una barra de cinco el centro es
+ * lo que el pulgar encuentra sin mirar. El disco no sobresale de la barra a
+ * proposito, asi las cinco celdas miden lo mismo y ninguna etiqueta se corta.
  */
 
-const TABS = [
-  {
-    href: '/dashboard',
-    label: 'Inicio',
-    icono: (
-      <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />
-    ),
-  },
+interface Tab {
+  href: string;
+  label: string;
+  icono: ReactNode;
+}
+
+const IZQUIERDA: Tab[] = [
   {
     href: '/dashboard/salud',
     label: 'Salud',
@@ -36,6 +41,19 @@ const TABS = [
       </>
     ),
   },
+];
+
+const DERECHA: Tab[] = [
+  {
+    href: '/dashboard/conectar',
+    label: 'Conectar',
+    icono: (
+      <>
+        <path d="M9 7V3.5M15 7V3.5" />
+        <path d="M7 7h10v4.5a5 5 0 0 1-10 0V7ZM12 16.5V21" />
+      </>
+    ),
+  },
   {
     href: '/dashboard/cuenta',
     label: 'Cuenta',
@@ -48,8 +66,47 @@ const TABS = [
   },
 ];
 
+function Icono({ activa, children }: { activa: boolean; children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={activa ? 2.4 : 1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
+  );
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  const esActiva = (href: string) =>
+    // /dashboard matchea exacto; el resto tambien cubre subrutas.
+    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+
+  const Pestania = ({ tab }: { tab: Tab }) => {
+    const activa = esActiva(tab.href);
+    return (
+      <Link
+        href={tab.href}
+        aria-current={activa ? 'page' : undefined}
+        className={`flex min-h-[4.5rem] flex-col items-center justify-center gap-1 pt-2 pb-1.5 transition-colors ${
+          activa ? 'text-bivi-blue' : 'text-bivi-muted hover:text-bivi-text'
+        }`}
+      >
+        <Icono activa={activa}>{tab.icono}</Icono>
+        <span className={`text-xs ${activa ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
+      </Link>
+    );
+  };
+
+  const inicioActiva = esActiva('/dashboard');
 
   return (
     <nav
@@ -57,41 +114,35 @@ export default function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-bivi-border/70 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="mx-auto flex max-w-xl">
-        {TABS.map((tab) => {
-          // /dashboard matchea exacto; el resto tambien cubre subrutas.
-          const activa =
-            tab.href === '/dashboard'
-              ? pathname === '/dashboard'
-              : pathname.startsWith(tab.href);
+      <div className="mx-auto grid max-w-xl grid-cols-5">
+        {IZQUIERDA.map((tab) => (
+          <Pestania key={tab.href} tab={tab} />
+        ))}
 
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              aria-current={activa ? 'page' : undefined}
-              className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 pt-2 pb-1.5 transition ${
-                activa ? 'text-bivi-blue' : 'text-bivi-muted hover:text-bivi-text'
-              }`}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={activa ? 2.4 : 1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {tab.icono}
-              </svg>
-              <span className={`text-xs ${activa ? 'font-bold' : 'font-medium'}`}>
-                {tab.label}
-              </span>
-            </Link>
-          );
-        })}
+        <Link
+          href="/dashboard"
+          aria-current={inicioActiva ? 'page' : undefined}
+          className="flex min-h-[4.5rem] flex-col items-center justify-center gap-1 pt-2 pb-1.5"
+        >
+          <span
+            className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+              inicioActiva ? 'bg-bivi-blue text-white' : 'bg-bivi-blue-soft text-bivi-blue'
+            }`}
+          >
+            <Icono activa={inicioActiva}>
+              <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />
+            </Icono>
+          </span>
+          <span
+            className={`text-xs font-bold ${inicioActiva ? 'text-bivi-blue' : 'text-bivi-muted'}`}
+          >
+            Inicio
+          </span>
+        </Link>
+
+        {DERECHA.map((tab) => (
+          <Pestania key={tab.href} tab={tab} />
+        ))}
       </div>
     </nav>
   );

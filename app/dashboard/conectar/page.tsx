@@ -1,14 +1,8 @@
 import type { ReactNode } from 'react';
 
 /**
- * Conectar: los aparatos de la casa que pueden sumarse a BiVi.
- *
- * IMPORTANTE: todavia no hay ninguna integracion real. Cada tarjeta explica
- * que haria el aparato y queda marcada como "Próximamente" en vez de ofrecer
- * un boton que no conecta nada. Un interruptor que finge vincular una camara
- * de seguridad seria, en esta app, una mentira con consecuencias.
+ * Conectar: los aparatos de la casa que se suman a BiVi.
  */
-
 interface Dispositivo {
   nombre: string;
   paraQue: string;
@@ -63,28 +57,6 @@ const DISPOSITIVOS: Dispositivo[] = [
       </>
     ),
   },
-  {
-    nombre: 'Botón de emergencia',
-    paraQue: 'Un aviso al instante si se cae o necesita ayuda, esté donde esté.',
-    ejemplos: 'colgantes y sensores de caída',
-    icono: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <circle cx="12" cy="12" r="3.5" />
-      </>
-    ),
-  },
-  {
-    nombre: 'Tensiómetro y glucómetro',
-    paraQue: 'Que las mediciones entren solas a la historia clínica, con su fecha.',
-    ejemplos: 'Omron, Accu-Chek',
-    icono: (
-      <>
-        <rect x="2.5" y="5" width="19" height="14" rx="3" />
-        <path d="M6 12h2.8l1.4-3.2 2.2 6.4 1.4-3.2H18" />
-      </>
-    ),
-  },
 ];
 
 export default function ConectarPage() {
@@ -97,68 +69,46 @@ export default function ConectarPage() {
         <p className="mt-1 text-bivi-muted">Los aparatos de la casa, sumados a BiVi</p>
       </header>
 
-      <div className="space-y-6">
-        <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
-          <h2 className="font-display text-2xl font-semibold text-bivi-text">
-            Todavía no hay conexiones disponibles
-          </h2>
-          <p className="mt-1 text-bivi-muted">
-            Estamos trabajando en las primeras. Acá vas a ver qué se puede conectar y qué
-            aporta cada cosa; cuando alguna esté lista, aparece el botón para vincularla.
-          </p>
-        </section>
+      <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
+        {/* En mobile el boton baja a su propia linea: compartiendo fila con
+            el texto, la descripcion quedaba en una columna de 117px. */}
+        <ul className="divide-y divide-bivi-border/60">
+          {DISPOSITIVOS.map((d) => (
+            <li
+              key={d.nombre}
+              className="flex flex-wrap items-start gap-x-4 gap-y-3 py-4 first:pt-0 last:pb-0"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-bivi-blue-soft text-bivi-blue">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {d.icono}
+                </svg>
+              </span>
 
-        <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
-          <h2 className="font-display text-2xl font-semibold text-bivi-text">
-            Qué se va a poder conectar
-          </h2>
-          <p className="mt-1 mb-6 text-bivi-muted">
-            Nada se conecta solo: cada aparato lo vinculás vos, y podés desconectarlo cuando
-            quieras.
-          </p>
+              <div className="min-w-[11rem] flex-1">
+                <p className="font-bold text-bivi-text">{d.nombre}</p>
+                <p className="mt-1 text-sm leading-relaxed text-bivi-text/85">{d.paraQue}</p>
+                <p className="mt-1 text-xs text-bivi-muted">{d.ejemplos}</p>
+              </div>
 
-          <ul className="divide-y divide-bivi-border/60 border-y border-bivi-border/60">
-            {DISPOSITIVOS.map((d) => (
-              <li key={d.nombre} className="flex items-start gap-4 py-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-bivi-blue-soft text-bivi-blue">
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {d.icono}
-                  </svg>
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <p className="font-bold text-bivi-text">{d.nombre}</p>
-                    <span className="shrink-0 rounded-full bg-bivi-bg px-2.5 py-0.5 text-xs font-bold text-bivi-muted">
-                      Próximamente
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm leading-relaxed text-bivi-text/85">{d.paraQue}</p>
-                  <p className="mt-1 text-xs text-bivi-muted">Por ejemplo: {d.ejemplos}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
-          <h2 className="font-display text-2xl font-semibold text-bivi-text">Sobre la privacidad</h2>
-          <p className="mt-1 text-bivi-muted">
-            Lo que BiVi conversa con el adulto mayor no se guarda, y eso no cambia por
-            conectar un aparato. De cada dispositivo va a entrar solo el dato que sirve para
-            el cuidado, y siempre vas a poder ver cuál es.
-          </p>
-        </section>
-      </div>
+              <button
+                disabled
+                className="w-full shrink-0 rounded-xl border border-bivi-border px-4 py-2.5 font-bold text-bivi-muted disabled:opacity-60 sm:w-auto sm:self-center"
+              >
+                Conectar
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
     </>
   );
 }

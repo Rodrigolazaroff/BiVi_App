@@ -126,7 +126,7 @@ export default function Documentos({
   }
 
   return (
-    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-xl shadow-bivi-blue/5 sm:p-8">
+    <section className="rounded-2xl border border-bivi-border/70 bg-white p-6 shadow-card sm:p-8">
       <h2 className="font-display text-2xl font-semibold text-bivi-text">Documentos médicos</h2>
       <p className="mt-1 mb-6 text-bivi-muted">
         Informes, análisis y recetas. BiVi los resume para armar la historia clínica; no
@@ -134,37 +134,82 @@ export default function Documentos({
       </p>
 
       {lista.length > 0 && (
-        <ul className="mb-6 divide-y divide-bivi-border/60">
+        <ul className="mb-6 divide-y divide-bivi-border/60 border-y border-bivi-border/60">
           {lista.map((doc) => (
-            <li key={doc.id} className="py-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-bivi-text">
-                    {doc.datos?.titulo || doc.nombre}
-                  </p>
-                  <p className="text-sm text-bivi-muted">
-                    {describirFecha(doc)} · {formatearTamano(doc.tamano)}
-                    {doc.datos?.tipo_documento && ` · ${doc.datos.tipo_documento}`}
-                  </p>
+            <li key={doc.id}>
+              {/*
+                Plegado por defecto: con veinte informes, volcar cada resumen
+                entero en la pantalla vuelve la lista imposible de recorrer.
+                Se usa <details> y no estado propio porque ya trae resuelto el
+                teclado y lo que anuncia el lector de pantalla.
+              */}
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-3 py-3.5 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold text-bivi-text">
+                      {doc.datos?.titulo || doc.nombre}
+                    </span>
+                    <span className="block text-sm text-bivi-muted">
+                      {describirFecha(doc)}
+                      {doc.datos?.tipo_documento && ` · ${doc.datos.tipo_documento}`}
+                      {!doc.resumen && ' · sin leer'}
+                    </span>
+                  </span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0 text-bivi-muted transition-transform duration-200 ease-out group-open:rotate-180"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </summary>
+
+                <div className="pb-4">
                   {doc.resumen ? (
-                    <p className="mt-1 text-sm text-bivi-text/80">{doc.resumen}</p>
+                    <p className="text-sm leading-relaxed text-bivi-text/85">{doc.resumen}</p>
                   ) : (
                     <button
                       onClick={() => procesar(doc.id)}
                       disabled={procesando === doc.id}
-                      className="mt-1 text-sm font-bold text-bivi-blue underline-offset-2 hover:underline disabled:opacity-60"
+                      className="text-sm font-bold text-bivi-blue underline-offset-2 hover:underline disabled:opacity-60"
                     >
                       {procesando === doc.id ? 'Leyendo el documento...' : 'Reintentar lectura'}
                     </button>
                   )}
+
+                  {doc.datos?.valores_relevantes?.length ? (
+                    <ul className="mt-3 flex flex-wrap gap-1.5">
+                      {doc.datos.valores_relevantes.map((v, i) => (
+                        <li
+                          key={i}
+                          className="rounded-lg bg-bivi-blue-soft px-2 py-1 text-xs font-bold text-bivi-blue"
+                        >
+                          {v}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <span className="text-xs text-bivi-muted">
+                      {formatearTamano(doc.tamano)}
+                    </span>
+                    {/* Quitar vive adentro del panel: borrar no puede quedar a
+                        un toque de distancia en una lista que se recorre. */}
+                    <button
+                      onClick={() => quitar(doc)}
+                      className="shrink-0 text-sm font-bold text-bivi-muted underline-offset-2 hover:text-bivi-alerta hover:underline"
+                    >
+                      Quitar
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => quitar(doc)}
-                  className="shrink-0 text-sm font-bold text-bivi-muted underline-offset-2 hover:text-red-700 hover:underline"
-                >
-                  Quitar
-                </button>
-              </div>
+              </details>
             </li>
           ))}
         </ul>
@@ -190,7 +235,7 @@ export default function Documentos({
 
       <div aria-live="polite">
         {error && (
-          <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+          <p className="mt-3 rounded-xl bg-bivi-alerta-soft px-4 py-3 text-sm font-bold text-bivi-alerta">
             {error}
           </p>
         )}

@@ -24,7 +24,10 @@ export default async function InicioPage() {
         .from('sessions')
         .select('started_at, duration_seconds, status')
         .order('started_at', { ascending: false })
-        .limit(30)
+        // El acumulado es de siempre, no de la ultima semana. El tope existe
+        // para que la consulta no crezca sin limite: a tres charlas por dia
+        // son mas de tres anios de uso.
+        .limit(1000)
     : { data: null };
 
   // Sellar el reloj aca mantiene puros a los componentes que lo reciben.
